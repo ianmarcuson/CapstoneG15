@@ -1,315 +1,508 @@
-"""
-Instrucciones de uso:
-1. Instalar dependencias:
-   pip install streamlit pandas plotly openpyxl
-2. Ejecutar la aplicación:
-   streamlit run dashboard_intradia_app.py
-"""
-
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import os
 
-st.set_page_config(page_title="Dashboard Intradía", layout="wide")
+# Fintual style config
+st.set_page_config(page_title="Dashboard Intradía", layout="wide", initial_sidebar_state="expanded")
 
-st.title("Dashboard de Planificación Intradiaria")
-st.subheader("Centro Oncológico | Análisis local")
+# Inject custom CSS for a cleaner, minimalist look
+st.markdown("""
+<style>
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+        font-family: 'Inter', sans-serif;
+    }
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+</style>
+""", unsafe_allow_html=True)
 
-# Sidebar
-st.sidebar.header("Configuración")
-uploaded_file = st.sidebar.file_uploader("Cargar archivo Excel (opcional)", type=["xlsx"])
+# ---------------------------------------------------------
+# 1. CORE FUNCTIONS
+# ---------------------------------------------------------
 
 @st.cache_data
-def load_data(file):
+def load_data(file_path):
     try:
-        xls = pd.ExcelFile(file)
+        xls = pd.ExcelFile(file_path)
         df_res = xls.parse("Resumen_Dias") if "Resumen_Dias" in xls.sheet_names else pd.DataFrame()
         df_prog = xls.parse("Programacion")
         df_ocup = xls.parse("Ocupacion_Modulos")
-        df_cg = xls.parse("CG_Historial") if "CG_Historial" in xls.sheet_names else pd.DataFrame()
-        return df_res, df_prog, df_ocup, df_cg
+        return df_res, df_prog, df_ocup
     except Exception as e:
-        return None, None, None, None
+        return None, None, None
+
+def assign_chairs_for_visualization(df_prog, n_chairs=15):
+    """
+    Greedy assignment of chairs. Returns a dataframe with 'chair_id' column.
+    If no chair is available, assigns 16.
+    """
+    assigned_rows = []
+    
+    for day, day_df in df_prog.groupby("day"):
+        day_df = day_df.sort_values(by="treatment_start")
+        chair_free_at = {c: 0 for c in range(1, n_chairs + 1)}
+        
+        for _, row in day_df.iterrows():
+            r_dict = row.to_dict()
+            assigned = False
+            for c in range(1, n_chairs + 1):
+                if chair_free_at[c] <= row["treatment_start"]:
+                    r_dict["chair_id"] = c
+                    chair_free_at[c] = row["treatment_start"] + row["treatment_modules"]
+                    assigned = True
+                    break
+            
+            if not assigned:
+                r_dict["chair_id"] = 16
+                
+            assigned_rows.append(r_dict)
+            
+    return pd.DataFrame(assigned_rows)
+
+def compute_kpis(f_prog, f_ocup):
+    total_sessions = len(f_prog)
+    unique_patients = f_prog["patient_id"].nunique() if total_sessions > 0 else 0
+    cumplimiento = (f_prog["treatment_end"] <= 47).sum() / total_sessions * 100 if total_sessions > 0 else 0
+    
+    total_extra = f_prog["extra_chair_modules"].sum() if total_sessions > 0 else 0
+    days_extra = f_prog[f_prog["extra_chair_modules"] > 0]["day"].nunique() if total_sessions > 0 else 0
+    
+    max_wait = f_prog["wait_after_pharmacy"].max() if total_sessions > 0 else 0
+    avg_wait = f_prog["wait_after_pharmacy"].mean() if total_sessions > 0 else 0
+    
+    total_chairs_used = f_ocup["chairs_used"].sum() if not f_ocup.empty else 0
+    total_chairs_cap = f_ocup["chair_capacity"].sum() if not f_ocup.empty else 0
+    util_chairs = (total_chairs_used / total_chairs_cap * 100) if total_chairs_cap > 0 else 0
+    
+    reg_ocup = f_ocup[f_ocup["is_extra"] == 0]
+    util_chairs_reg = (reg_ocup["chairs_used"].sum() / reg_ocup["chair_capacity"].sum() * 100) if not reg_ocup.empty and reg_ocup["chair_capacity"].sum() > 0 else 0
+    
+    n_col = "nurse_events" if "nurse_events" in f_ocup.columns else "nurse_starts"
+    if n_col == "nurse_starts" and "nurse_ends" in f_ocup.columns:
+        nurse_used = f_ocup["nurse_starts"].sum() + f_ocup["nurse_ends"].sum()
+    else:
+        nurse_used = f_ocup[n_col].sum() if not f_ocup.empty else 0
+        
+    nurse_cap = f_ocup["nurse_capacity"].sum() if not f_ocup.empty else 0
+    util_nurses = (nurse_used / nurse_cap * 100) if nurse_cap > 0 else 0
+    
+    pharm_used = f_ocup["pharmacy_used"].sum() if not f_ocup.empty else 0
+    pharm_cap = f_ocup["pharmacy_capacity"].sum() if not f_ocup.empty else 0
+    util_pharm = (pharm_used / pharm_cap * 100) if pharm_cap > 0 else 0
+    
+    most_loaded_day = f_prog.groupby("day")["treatment_modules"].sum().idxmax() if total_sessions > 0 else None
+    
+    return {
+        "sessions": total_sessions, "unique_patients": unique_patients, "cumplimiento": cumplimiento,
+        "total_extra": total_extra, "days_extra": days_extra, "max_wait": max_wait, "avg_wait": avg_wait,
+        "util_chairs": util_chairs, "util_chairs_reg": util_chairs_reg, "util_nurses": util_nurses,
+        "util_pharm": util_pharm, "most_loaded_day": most_loaded_day
+    }
+
+def get_critical_days(df_prog, df_ocup):
+    if df_prog.empty: return []
+    
+    extra_days = df_prog[df_prog["extra_chair_modules"] > 0]["day"].unique()
+    wait_days = df_prog[df_prog["wait_after_pharmacy"] > 6]["day"].unique()
+    
+    if df_ocup.empty: return list(set(extra_days) | set(wait_days))
+    
+    chairs_crit = df_ocup[df_ocup["chairs_used"] == df_ocup["chair_capacity"]]["day"].unique()
+    
+    n_col = "nurse_events" if "nurse_events" in df_ocup.columns else "nurse_starts"
+    if n_col == "nurse_starts" and "nurse_ends" in df_ocup.columns:
+        n_used = df_ocup["nurse_starts"] + df_ocup["nurse_ends"]
+    else:
+        n_used = df_ocup[n_col]
+    nurses_crit = df_ocup[n_used == df_ocup["nurse_capacity"]]["day"].unique()
+    
+    pharm_crit = df_ocup[df_ocup["pharmacy_used"] == df_ocup["pharmacy_capacity"]]["day"].unique()
+    
+    criticals = set(extra_days) | set(wait_days) | set(chairs_crit) | set(nurses_crit) | set(pharm_crit)
+    return list(criticals)
+
+# ---------------------------------------------------------
+# 2. INITIALIZATION
+# ---------------------------------------------------------
+st.title("Planificación Intradiaria")
+st.markdown("Centro Oncológico | Análisis Operacional")
+
+possible_paths = [
+    "Modelo INTRAdia/Modelo INTRAdia/475_solution_deldia_v2.xlsx",
+    "Modelo INTRAdia/475_solution_deldia_v2.xlsx",
+    "475_solution_deldia_v2.xlsx",
+    "Modelo INTRAdia/solution_deldia_v2.xlsx",
+    "solution_deldia_v2.xlsx"
+]
 
 file_to_load = None
-if uploaded_file is not None:
+uploaded_file = st.sidebar.file_uploader("Cargar Archivo Excel", type=["xlsx"])
+if uploaded_file:
     file_to_load = uploaded_file
 else:
-    # Look in local dir and typical subdirs
-    possible_paths = [
-        "Modelo INTRAdia/Modelo INTRAdia/475_solution_deldia_v2.xlsx",
-        "Modelo INTRAdia/475_solution_deldia_v2.xlsx",
-        "475_solution_deldia_v2.xlsx",
-        "Modelo INTRAdia/solution_deldia_v2.xlsx",
-        "solution_deldia_v2.xlsx"
-    ]
     for p in possible_paths:
         if os.path.exists(p):
             file_to_load = p
             break
 
 if file_to_load is None:
-    st.error("No se encontró 'solution_deldia_v2.xlsx' ni '475_solution_deldia_v2.xlsx' en el directorio. Por favor carga un archivo en la barra lateral.")
+    st.error("No se encontró el archivo de datos. Por favor cárgalo en la barra lateral.")
     st.stop()
 
-df_res, df_prog, df_ocup, df_cg = load_data(file_to_load)
+df_res, df_prog_raw, df_ocup_raw = load_data(file_to_load)
 
-if df_prog is None or df_prog.empty:
-    st.error("Error al leer el archivo. Asegúrate de que contiene la hoja 'Programacion'.")
-    st.stop()
-if df_ocup is None or df_ocup.empty:
-    st.error("Error al leer el archivo. Asegúrate de que contiene la hoja 'Ocupacion_Modulos'.")
+if df_prog_raw is None or df_prog_raw.empty:
+    st.error("Error leyendo 'Programacion'.")
     st.stop()
 
-# --- FILTROS ---
-min_day = int(df_prog["day"].min())
-max_day = int(df_prog["day"].max())
+if "chair_id" not in df_prog_raw.columns:
+    df_prog_raw = assign_chairs_for_visualization(df_prog_raw)
 
-col_start, col_end = st.sidebar.columns(2)
-start_d = col_start.number_input("Día Inicio", min_value=0, max_value=1000, value=min_day)
-end_d = col_end.number_input("Día Término", min_value=0, max_value=1000, value=max_day)
+# ---------------------------------------------------------
+# 3. SIDEBAR FILTERS
+# ---------------------------------------------------------
+st.sidebar.markdown("### Filtros Globales")
+
+min_d, max_d = int(df_prog_raw["day"].min()), int(df_prog_raw["day"].max())
+
+c1, c2 = st.sidebar.columns(2)
+start_d = c1.number_input("Día Inicio", min_value=0, max_value=10000, value=min_d)
+end_d = c2.number_input("Día Término", min_value=0, max_value=10000, value=max_d)
 
 if start_d > end_d:
-    st.sidebar.error("El día de inicio debe ser menor o igual al día de término.")
+    st.sidebar.error("Inicio > Término")
     st.stop()
 
-st.sidebar.markdown("---")
-specific_day = st.sidebar.number_input("Seleccionar Día para Detalle", min_value=start_d, max_value=end_d, value=start_d)
+df_prog = df_prog_raw[(df_prog_raw["day"] >= start_d) & (df_prog_raw["day"] <= end_d)].copy()
+df_ocup = df_ocup_raw[(df_ocup_raw["day"] >= start_d) & (df_ocup_raw["day"] <= end_d)].copy()
 
-# Filtrar data
-mask_prog = (df_prog["day"] >= start_d) & (df_prog["day"] <= end_d)
-f_prog = df_prog[mask_prog]
+patient_types = sorted(df_prog["patient_type"].unique())
+sel_ptypes = st.sidebar.multiselect("Tipos de Paciente", options=patient_types, default=patient_types)
 
-mask_ocup = (df_ocup["day"] >= start_d) & (df_ocup["day"] <= end_d)
-f_ocup = df_ocup[mask_ocup]
+patient_ids = sorted(df_prog["patient_id"].unique())
+sel_pids = st.sidebar.multiselect("ID Paciente (Opcional)", options=patient_ids, default=[])
 
-if f_prog.empty or f_ocup.empty:
-    st.warning("No hay datos para el rango seleccionado.")
+show_extra = st.sidebar.checkbox("Mostrar solo sesiones con módulos extra", value=False)
+show_critical = st.sidebar.checkbox("Mostrar solo días críticos", value=False)
+
+if sel_ptypes:
+    df_prog = df_prog[df_prog["patient_type"].isin(sel_ptypes)]
+
+if sel_pids:
+    df_prog = df_prog[df_prog["patient_id"].isin(sel_pids)]
+
+if show_extra:
+    df_prog = df_prog[df_prog["extra_chair_modules"] > 0]
+
+valid_days = df_prog["day"].unique()
+
+if show_critical:
+    crit_days = get_critical_days(df_prog_raw, df_ocup_raw)
+    valid_days = [d for d in valid_days if d in crit_days]
+    df_prog = df_prog[df_prog["day"].isin(valid_days)]
+
+df_ocup = df_ocup[df_ocup["day"].isin(valid_days)]
+
+if df_prog.empty:
+    st.warning("No hay datos que coincidan con los filtros seleccionados.")
     st.stop()
 
-# --- KPIs ---
-total_sessions = len(f_prog)
-unique_patients = f_prog["patient_id"].nunique()
+st.sidebar.markdown("### Vistas Específicas")
+day_options = [f"Día {d} | Cal {int(d)+1}" for d in sorted(valid_days)]
+selected_day_str = st.sidebar.selectbox("Seleccionar Día Específico", options=day_options)
+selected_day = int(selected_day_str.split(" ")[1])
 
-cumplimiento_horario = (f_prog["treatment_end"] <= 47).sum() / total_sessions * 100 if total_sessions > 0 else 0
+views = ["Ejecutiva", "Recursos", "Sillas intradía", "Pacientes intradía", "Día crítico", "Datos"]
+current_view = st.sidebar.radio("Navegación", options=views)
 
-total_extra_modules = f_prog["extra_chair_modules"].sum()
-days_with_extra = f_prog[f_prog["extra_chair_modules"] > 0]["day"].nunique()
+# ---------------------------------------------------------
+# 4. RENDERERS
+# ---------------------------------------------------------
+kpis = compute_kpis(df_prog, df_ocup)
 
-max_wait = f_prog["wait_after_pharmacy"].max()
-avg_wait = f_prog["wait_after_pharmacy"].mean()
+if (df_prog["chair_id"] == 16).any():
+    st.error("⚠️ Hay sesiones que no pudieron asignarse a las 15 sillas en la visualización. Revisar consistencia.")
 
-total_chairs_used = f_ocup["chairs_used"].sum()
-total_chairs_cap = f_ocup["chair_capacity"].sum()
-util_chairs = (total_chairs_used / total_chairs_cap * 100) if total_chairs_cap > 0 else 0
-
-reg_ocup = f_ocup[f_ocup["is_extra"] == 0]
-reg_chairs_used = reg_ocup["chairs_used"].sum()
-reg_chairs_cap = reg_ocup["chair_capacity"].sum()
-util_chairs_reg = (reg_chairs_used / reg_chairs_cap * 100) if reg_chairs_cap > 0 else 0
-
-if "nurse_events" in f_ocup.columns:
-    nurse_used = f_ocup["nurse_events"].sum()
-else:
-    nurse_used = f_ocup["nurse_starts"].sum() + f_ocup["nurse_ends"].sum()
-nurse_cap = f_ocup["nurse_capacity"].sum()
-util_nurses = (nurse_used / nurse_cap * 100) if nurse_cap > 0 else 0
-
-pharm_used = f_ocup["pharmacy_used"].sum()
-pharm_cap = f_ocup["pharmacy_capacity"].sum()
-util_pharm = (pharm_used / pharm_cap * 100) if pharm_cap > 0 else 0
-
-daily_load = f_prog.groupby("day")["treatment_modules"].sum()
-most_loaded_day = daily_load.idxmax() if not daily_load.empty else "N/A"
-
-# --- INSIGHTS AUTOMÁTICOS ---
-st.markdown("### 💡 Insights Automáticos")
-insights = []
-if total_extra_modules == 0:
-    insights.append("✅ No se usaron módulos extraordinarios en el período.")
-else:
-    insights.append(f"⚠️ Se usaron {total_extra_modules} módulos extra distribuidos en {days_with_extra} días.")
-
-if cumplimiento_horario < 95:
-    insights.append(f"⚠️ Hay sesiones que terminan fuera del horario regular (Cumplimiento: {cumplimiento_horario:.1f}%).")
-else:
-    insights.append(f"✅ Excelente cumplimiento del horario regular ({cumplimiento_horario:.1f}%).")
-
-if max_wait > 6:
-    insights.append(f"⚠️ Se detectan esperas intradía altas (Máxima: {max_wait} módulos = {max_wait*15} min).")
-
-insights.append(f"📅 El día más cargado fue el Día {most_loaded_day} con {daily_load.max() if not daily_load.empty else 0} módulos de tratamiento.")
-
-recursos = {"Sillas": util_chairs, "Enfermería": util_nurses, "Farmacia": util_pharm}
-max_recurso = max(recursos, key=recursos.get)
-insights.append(f"📊 El recurso más utilizado promedio fue **{max_recurso}** ({recursos[max_recurso]:.1f}%).")
-
-for ins in insights:
-    st.markdown(f"- {ins}")
-
-st.markdown("---")
-
-# --- MAIN TABS ---
-tab1, tab2, tab3, tab4 = st.tabs(["📊 Resumen", "⚙️ Recursos", "📅 Día Específico", "🗄️ Datos"])
-
-with tab1:
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Sesiones", total_sessions)
-    col2.metric("Pacientes Únicos", unique_patients)
-    col3.metric("Cumpl. Horario Reg.", f"{cumplimiento_horario:.1f}%")
-    col4.metric("Día Más Cargado", f"Día {most_loaded_day}")
+if (df_prog["treatment_end"] > 55).any():
+    st.error("⚠️ Existen sesiones con treatment_end > 55.")
     
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Módulos Extra", total_extra_modules)
-    col2.metric("Días con Extra", days_with_extra)
-    col3.metric("Espera Máx", f"{max_wait} mod ({max_wait*15} min)")
-    col4.metric("Espera Promedio", f"{avg_wait:.1f} mod ({int(avg_wait*15)} min)")
+if (df_prog["pharmacy_start"] < 0).any() or (df_prog["treatment_start"] < 0).any():
+    st.error("⚠️ Existen inicios de módulo negativos.")
+
+# Minimalist color palette
+C_PHARM = "#38bdf8"
+C_WAIT = "#f43f5e"
+C_TREAT = "#10b981"
+C_EXTRA = "#f59e0b"
+C_CAP = "#a0aec0"
+
+def render_executive_view():
+    st.subheader("Resumen del Período")
     
-    st.markdown("### Carga Diaria")
-    daily_stats = f_prog.groupby("day").agg(
+    st.markdown("##### 💡 Insights Automáticos")
+    if kpis["total_extra"] == 0:
+        st.success("No se usaron módulos extraordinarios en el período.")
+    else:
+        st.warning(f"Se usaron {kpis['total_extra']} módulos extra en {kpis['days_extra']} días.")
+        
+    if kpis["cumplimiento"] < 95:
+        st.warning(f"Hay sesiones que terminan fuera del horario regular. (Cumplimiento: {kpis['cumplimiento']:.1f}%)")
+    else:
+        st.success(f"Excelente cumplimiento del horario regular ({kpis['cumplimiento']:.1f}%).")
+        
+    if kpis["max_wait"] > 6:
+        st.error(f"Se detectan esperas intradía altas (Máxima: {kpis['max_wait']} mod / {kpis['max_wait']*15} min).")
+        
+    st.markdown("---")
+    
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Sesiones Realizadas", f"{kpis['sessions']:,}")
+    c2.metric("Pacientes Únicos", f"{kpis['unique_patients']:,}")
+    c3.metric("Cumpl. Horario", f"{kpis['cumplimiento']:.1f}%")
+    c4.metric("Día Más Cargado", f"Día {kpis['most_loaded_day']}")
+    
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Módulos Extra", f"{kpis['total_extra']:,}")
+    c2.metric("Días con Extra", f"{kpis['days_extra']}")
+    c3.metric("Espera Máxima", f"{kpis['max_wait']} mod")
+    c4.metric("Espera Promedio", f"{kpis['avg_wait']:.1f} mod")
+    
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Util. Sillas (Total)", f"{kpis['util_chairs']:.1f}%")
+    c2.metric("Util. Sillas (Reg)", f"{kpis['util_chairs_reg']:.1f}%")
+    c3.metric("Ocup. Enfermería", f"{kpis['util_nurses']:.1f}%")
+    c4.metric("Ocup. Farmacia", f"{kpis['util_pharm']:.1f}%")
+
+    daily = df_prog.groupby("day").agg(
         Tratamiento=("treatment_modules", "sum"),
         Sesiones=("session", "count"),
         Extra=("extra_chair_modules", "sum")
     ).reset_index()
     
-    fig1 = px.bar(daily_stats, x="day", y=["Tratamiento", "Extra"], 
-                  title="Módulos de Tratamiento y Extra por Día",
-                  labels={"value": "Módulos", "variable": "Tipo", "day": "Día"},
-                  barmode="stack", color_discrete_sequence=["#10b981", "#f43f5e"])
-    st.plotly_chart(fig1, use_container_width=True)
-    
-    fig2 = px.line(daily_stats, x="day", y="Sesiones", title="Sesiones por Día", markers=True)
-    st.plotly_chart(fig2, use_container_width=True)
+    fig = px.bar(daily, x="day", y=["Tratamiento", "Extra"], title="Módulos Tratamiento y Extra por Día",
+                 color_discrete_sequence=[C_TREAT, C_EXTRA], barmode="stack")
+    fig.update_layout(plot_bgcolor="rgba(0,0,0,0)")
+    st.plotly_chart(fig, use_container_width=True)
 
-with tab2:
-    st.markdown("### Utilización de Recursos (Promedio)")
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Sillas (Total)", f"{util_chairs:.1f}%")
-    col2.metric("Sillas (Regular)", f"{util_chairs_reg:.1f}%")
-    col3.metric("Enfermería", f"{util_nurses:.1f}%")
-    col4.metric("Farmacia", f"{util_pharm:.1f}%")
-    
-    if "nurse_events" in f_ocup.columns:
-        n_col = f_ocup["nurse_events"]
-    else:
-        n_col = f_ocup["nurse_starts"] + f_ocup["nurse_ends"]
+def render_sillas_view(day):
+    st.subheader(f"Asignación Fija a Sillas - Día {day}")
+    day_df = df_prog[df_prog["day"] == day]
+    if day_df.empty:
+        st.info("No hay pacientes para este día.")
+        return
         
-    f_ocup_copy = f_ocup.copy()
-    f_ocup_copy["nurse_computed"] = n_col
+    fig = go.Figure()
     
-    ocup_avg = f_ocup_copy.groupby("module").agg(
-        Sillas=("chairs_used", "mean"),
-        Enfermería=("nurse_computed", "mean"),
-        Farmacia=("pharmacy_used", "mean"),
-        Cap_Sillas=("chair_capacity", "max"),
-        Cap_Enfermería=("nurse_capacity", "max"),
-        Cap_Farmacia=("pharmacy_capacity", "max")
-    ).reset_index()
+    ptypes = day_df["patient_type"].unique()
+    colors = px.colors.qualitative.Pastel
+    color_map = {pt: colors[i % len(colors)] for i, pt in enumerate(ptypes)}
     
-    fig_res = go.Figure()
-    fig_res.add_trace(go.Bar(x=ocup_avg["module"], y=ocup_avg["Sillas"], name="Sillas Promedio", marker_color="#6366f1"))
-    fig_res.add_trace(go.Scatter(x=ocup_avg["module"], y=ocup_avg["Cap_Sillas"], name="Cap Sillas", mode="lines", line=dict(dash="dash", color="#6366f1")))
+    for _, r in day_df.iterrows():
+        hover = (f"Paciente: {r['patient_id']} | Tipo: {r['patient_type']}<br>"
+                 f"Ciclo/Ses: {r['cycle']}/{r['session']}<br>"
+                 f"Silla: {r['chair_id']}<br>"
+                 f"Farmacia: {r['pharmacy_start']} - {r['pharmacy_end']}<br>"
+                 f"Espera: {r['wait_after_pharmacy']} mod<br>"
+                 f"Tratamiento: {r['treatment_start']} - {r['treatment_end']}<br>"
+                 f"Extra: {r['extra_chair_modules']}")
+                 
+        fig.add_trace(go.Bar(
+            x=[r["treatment_modules"]],
+            y=[f"Silla {int(r['chair_id'])}"],
+            base=[r["treatment_start"]],
+            orientation="h",
+            marker_color=color_map[r["patient_type"]],
+            name=f"Tipo {r['patient_type']}",
+            hoverinfo="text",
+            hovertext=hover,
+            text=f"Pat {r['patient_id']}",
+            textposition="inside"
+        ))
+        
+    fig.add_vline(x=48, line_width=2, line_dash="dash", line_color=C_WAIT, annotation_text="Inicio jornada extra")
     
-    fig_res.add_trace(go.Bar(x=ocup_avg["module"], y=ocup_avg["Enfermería"], name="Enfermeras Promedio", marker_color="#8b5cf6"))
-    fig_res.add_trace(go.Scatter(x=ocup_avg["module"], y=ocup_avg["Cap_Enfermería"], name="Cap Enfermería", mode="lines", line=dict(dash="dash", color="#8b5cf6")))
+    fig.update_layout(
+        barmode="stack", showlegend=False, 
+        xaxis=dict(title="Módulos (0 a 55)", range=[0, 56], tick0=0, dtick=4, gridcolor="#f0f0f0"),
+        yaxis=dict(type="category", categoryorder="array", categoryarray=[f"Silla {i}" for i in range(15, 0, -1)]),
+        plot_bgcolor="rgba(0,0,0,0)", margin=dict(l=80, r=20, t=30, b=40)
+    )
     
-    fig_res.add_trace(go.Bar(x=ocup_avg["module"], y=ocup_avg["Farmacia"], name="Farmacia Promedio", marker_color="#ec4899"))
-    fig_res.add_trace(go.Scatter(x=ocup_avg["module"], y=ocup_avg["Cap_Farmacia"], name="Cap Farmacia", mode="lines", line=dict(dash="dash", color="#ec4899")))
+    st.plotly_chart(fig, use_container_width=True)
+
+def render_pacientes_view(day):
+    st.subheader(f"Gantt por Paciente - Día {day}")
+    day_df = df_prog[df_prog["day"] == day]
+    if day_df.empty:
+        st.info("No hay pacientes.")
+        return
+        
+    fig = go.Figure()
+    day_df = day_df.sort_values("treatment_start", ascending=False)
     
-    fig_res.update_layout(title="Perfil Promedio de Ocupación (Módulo 0-55)", xaxis_title="Módulo", yaxis_title="Uso Promedio", barmode="group")
-    st.plotly_chart(fig_res, use_container_width=True)
+    pharm_x, pharm_y, pharm_base, pharm_h = [], [], [], []
+    wait_x, wait_y, wait_base, wait_h = [], [], [], []
+    treat_x, treat_y, treat_base, treat_h = [], [], [], []
     
-    st.markdown("### Top Días Críticos")
-    crit_stats = f_prog.groupby("day").agg(
+    for _, r in day_df.iterrows():
+        pid = f"Pat {r['patient_id']}"
+        h_str = (f"Pat: {r['patient_id']} | Tipo: {r['patient_type']}<br>"
+                 f"Silla {r['chair_id']} | Extra {r['extra_chair_modules']}<br>"
+                 f"Farmacia: {r['pharmacy_start']} - {r['pharmacy_end']}<br>"
+                 f"Tratamiento: {r['treatment_start']} - {r['treatment_end']}")
+                 
+        if r["pharmacy_modules"] > 0:
+            pharm_x.append(r["pharmacy_modules"]); pharm_y.append(pid); pharm_base.append(r["pharmacy_start"]); pharm_h.append(h_str)
+        if r["wait_after_pharmacy"] > 0:
+            wait_x.append(r["wait_after_pharmacy"]); wait_y.append(pid); wait_base.append(r["pharmacy_end"]); wait_h.append(h_str)
+        if r["treatment_modules"] > 0:
+            treat_x.append(r["treatment_modules"]); treat_y.append(pid); treat_base.append(r["treatment_start"]); treat_h.append(h_str)
+            
+    if pharm_x:
+        fig.add_trace(go.Bar(x=pharm_x, y=pharm_y, base=pharm_base, orientation='h', name='Farmacia', marker_color=C_PHARM, hovertext=pharm_h, hoverinfo='text'))
+    if wait_x:
+        fig.add_trace(go.Bar(x=wait_x, y=wait_y, base=wait_base, orientation='h', name='Espera', marker_color=C_WAIT, hovertext=wait_h, hoverinfo='text'))
+    if treat_x:
+        fig.add_trace(go.Bar(x=treat_x, y=treat_y, base=treat_base, orientation='h', name='Tratamiento', marker_color=C_TREAT, hovertext=treat_h, hoverinfo='text'))
+        
+    fig.add_vline(x=48, line_width=2, line_dash="dash", line_color=C_WAIT, annotation_text="Inicio jornada extra")
+    fig.update_layout(
+        barmode="stack",
+        xaxis=dict(title="Módulos (0 a 55)", range=[0, 56], tick0=0, dtick=4, gridcolor="#f0f0f0"),
+        yaxis=dict(type="category"),
+        plot_bgcolor="rgba(0,0,0,0)"
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+def render_recursos_view():
+    tab_day, tab_avg = st.tabs(["Día Específico", "Promedio del Período"])
+    
+    def get_nurse(df):
+        if "nurse_events" in df.columns: return df["nurse_events"]
+        if "nurse_starts" in df.columns and "nurse_ends" in df.columns: return df["nurse_starts"] + df["nurse_ends"]
+        return df["nurse_starts"] if "nurse_starts" in df.columns else 0
+
+    with tab_day:
+        st.subheader(f"Perfil de Recursos - Día {selected_day}")
+        day_ocup = df_ocup[df_ocup["day"] == selected_day].copy()
+        if day_ocup.empty:
+            st.info("No hay datos de ocupación.")
+        else:
+            day_ocup["nurse_computed"] = get_nurse(day_ocup)
+            fig = go.Figure()
+            fig.add_trace(go.Bar(x=day_ocup["module"], y=day_ocup["chairs_used"], name="Sillas", marker_color="#6366f1"))
+            fig.add_trace(go.Scatter(x=day_ocup["module"], y=day_ocup["chair_capacity"], name="Cap Sillas", mode="lines", line=dict(dash="dash", color=C_CAP)))
+            
+            fig.add_trace(go.Bar(x=day_ocup["module"], y=day_ocup["nurse_computed"], name="Enfermería", marker_color="#8b5cf6"))
+            fig.add_trace(go.Scatter(x=day_ocup["module"], y=day_ocup["nurse_capacity"], name="Cap Enfermería", mode="lines", line=dict(dash="dash", color=C_CAP)))
+            
+            fig.add_trace(go.Bar(x=day_ocup["module"], y=day_ocup["pharmacy_used"], name="Farmacia", marker_color=C_PHARM))
+            fig.add_trace(go.Scatter(x=day_ocup["module"], y=day_ocup["pharmacy_capacity"], name="Cap Farmacia", mode="lines", line=dict(dash="dash", color=C_CAP)))
+            
+            fig.add_vline(x=48, line_width=2, line_dash="dash", line_color=C_WAIT)
+            fig.update_layout(barmode="group", plot_bgcolor="rgba(0,0,0,0)", xaxis=dict(gridcolor="#f0f0f0"))
+            st.plotly_chart(fig, use_container_width=True)
+            
+    with tab_avg:
+        st.subheader("Ocupación Promedio")
+        df_ocup_copy = df_ocup.copy()
+        df_ocup_copy["nurse_computed"] = get_nurse(df_ocup_copy)
+        avg = df_ocup_copy.groupby("module").agg(
+            Sillas=("chairs_used", "mean"), Enf=("nurse_computed", "mean"), Pharm=("pharmacy_used", "mean"),
+            cS=("chair_capacity", "max"), cE=("nurse_capacity", "max"), cP=("pharmacy_capacity", "max")
+        ).reset_index()
+        
+        fig2 = go.Figure()
+        fig2.add_trace(go.Bar(x=avg["module"], y=avg["Sillas"], name="Sillas Prom", marker_color="#6366f1"))
+        fig2.add_trace(go.Scatter(x=avg["module"], y=avg["cS"], mode="lines", line=dict(dash="dash", color=C_CAP)))
+        fig2.add_trace(go.Bar(x=avg["module"], y=avg["Enf"], name="Enf Prom", marker_color="#8b5cf6"))
+        fig2.add_trace(go.Scatter(x=avg["module"], y=avg["cE"], mode="lines", line=dict(dash="dash", color=C_CAP)))
+        fig2.add_trace(go.Bar(x=avg["module"], y=avg["Pharm"], name="Farm Prom", marker_color=C_PHARM))
+        fig2.add_trace(go.Scatter(x=avg["module"], y=avg["cP"], mode="lines", line=dict(dash="dash", color=C_CAP)))
+        fig2.add_vline(x=48, line_width=2, line_dash="dash", line_color=C_WAIT)
+        fig2.update_layout(barmode="group", plot_bgcolor="rgba(0,0,0,0)", xaxis=dict(gridcolor="#f0f0f0"))
+        st.plotly_chart(fig2, use_container_width=True)
+
+def render_critical_days_view():
+    st.subheader("Top Días Críticos")
+    
+    crit_stats = df_prog.groupby("day").agg(
         sesiones=("session", "count"),
         modulos_trat=("treatment_modules", "sum"),
         modulos_extra=("extra_chair_modules", "sum"),
         espera_max=("wait_after_pharmacy", "max")
     ).reset_index()
     
-    crit_ocup = f_ocup_copy.groupby("day").agg(
+    df_ocup_copy = df_ocup.copy()
+    if "nurse_events" in df_ocup_copy.columns: n_col = df_ocup_copy["nurse_events"]
+    elif "nurse_starts" in df_ocup_copy.columns: n_col = df_ocup_copy["nurse_starts"] + df_ocup_copy.get("nurse_ends", 0)
+    else: n_col = 0
+    df_ocup_copy["n_comp"] = n_col
+    
+    crit_ocup = df_ocup_copy.groupby("day").agg(
         max_chairs=("chairs_used", "max"),
-        max_nurses=("nurse_computed", "max"),
+        max_nurses=("n_comp", "max"),
         max_pharmacy=("pharmacy_used", "max")
     ).reset_index()
     
-    crit_df = pd.merge(crit_stats, crit_ocup, on="day")
+    crit_df = pd.merge(crit_stats, crit_ocup, on="day", how="left")
     crit_df["dia_calendario"] = crit_df["day"] + 1
-    crit_df = crit_df.sort_values(by="modulos_trat", ascending=False).head(10)
+    
+    crit_df = crit_df.sort_values(
+        by=["modulos_extra", "modulos_trat", "espera_max", "max_nurses", "max_pharmacy"], 
+        ascending=[False, False, False, False, False]
+    )
     
     st.dataframe(crit_df[["day", "dia_calendario", "sesiones", "modulos_trat", "modulos_extra", "espera_max", "max_chairs", "max_nurses", "max_pharmacy"]], use_container_width=True)
+    st.markdown("---")
+    st.markdown("Selecciona un **Día Específico** en la barra lateral para ver su detalle en las vistas de Sillas y Recursos.")
 
-with tab3:
-    st.markdown(f"### Detalle Día {specific_day}")
-    day_prog = f_prog[f_prog["day"] == specific_day].copy()
-    day_ocup = f_ocup[f_ocup["day"] == specific_day].copy()
+def render_datos_view():
+    st.subheader("Datos Filtrados")
+    st.markdown("Puedes descargar la data que estás visualizando con los botones de abajo.")
     
-    if day_prog.empty:
-        st.info("No hay sesiones programadas para este día.")
-    else:
-        st.markdown("#### Tabla de Sesiones")
-        st.dataframe(day_prog[["patient_id", "patient_type", "pharmacy_start", "pharmacy_modules", "wait_after_pharmacy", "treatment_start", "treatment_modules", "extra_chair_modules"]], use_container_width=True)
+    col1, col2 = st.columns(2)
+    with col1:
+        st.download_button("Descargar Programación (CSV)", df_prog.to_csv(index=False), "programacion_filtrada.csv", "text/csv")
+    with col2:
+        st.download_button("Descargar Ocupación (CSV)", df_ocup.to_csv(index=False), "ocupacion_filtrada.csv", "text/csv")
         
-        st.markdown("#### Ocupación Intradía por Módulo")
-        fig_d_res = go.Figure()
-        fig_d_res.add_trace(go.Bar(x=day_ocup["module"], y=day_ocup["chairs_used"], name="Sillas", marker_color="#6366f1"))
-        fig_d_res.add_trace(go.Scatter(x=day_ocup["module"], y=day_ocup["chair_capacity"], name="Cap Sillas", mode="lines", line=dict(dash="dash", color="#ef4444")))
-        
-        if "nurse_events" in day_ocup.columns:
-            day_n_events = day_ocup["nurse_events"]
-        else:
-            day_n_events = day_ocup["nurse_starts"] + day_ocup["nurse_ends"]
-            
-        fig_d_res.add_trace(go.Bar(x=day_ocup["module"], y=day_n_events, name="Enfermeras", marker_color="#8b5cf6"))
-        fig_d_res.add_trace(go.Bar(x=day_ocup["module"], y=day_ocup["pharmacy_used"], name="Farmacia", marker_color="#ec4899"))
-        
-        fig_d_res.update_layout(barmode="group", xaxis_title="Módulo", yaxis_title="Uso")
-        st.plotly_chart(fig_d_res, use_container_width=True)
-        
-        st.markdown("#### Gantt de Pacientes")
-        gantt_data = []
-        day_prog = day_prog.sort_values(by="treatment_start", ascending=False)
-        
-        pharm_x, pharm_y, pharm_base = [], [], []
-        wait_x, wait_y, wait_base = [], [], []
-        treat_x, treat_y, treat_base = [], [], []
-        
-        for _, row in day_prog.iterrows():
-            pid = f"Pat {int(row['patient_id'])}"
-            if row["pharmacy_modules"] > 0:
-                pharm_x.append(row["pharmacy_modules"])
-                pharm_y.append(pid)
-                pharm_base.append(row["pharmacy_start"])
-            
-            if row["wait_after_pharmacy"] > 0:
-                wait_x.append(row["wait_after_pharmacy"])
-                wait_y.append(pid)
-                wait_base.append(row["pharmacy_start"] + row["pharmacy_modules"])
-                
-            if row["treatment_modules"] > 0:
-                treat_x.append(row["treatment_modules"])
-                treat_y.append(pid)
-                treat_base.append(row["treatment_start"])
-                
-        fig_gantt = go.Figure()
-        if pharm_x:
-            fig_gantt.add_trace(go.Bar(x=pharm_x, y=pharm_y, base=pharm_base, orientation='h', name='Farmacia', marker_color='#38bdf8'))
-        if wait_x:
-            fig_gantt.add_trace(go.Bar(x=wait_x, y=wait_y, base=wait_base, orientation='h', name='Espera', marker_color='#f43f5e'))
-        if treat_x:
-            fig_gantt.add_trace(go.Bar(x=treat_x, y=treat_y, base=treat_base, orientation='h', name='Tratamiento', marker_color='#10b981'))
-            
-        fig_gantt.update_layout(barmode='stack', xaxis=dict(title='Módulo', range=[0, 56], tick0=0, dtick=4), yaxis=dict(type='category'))
-        st.plotly_chart(fig_gantt, use_container_width=True)
+    st.markdown("##### Programación")
+    df_prog_show = df_prog.copy()
+    df_prog_show["dia_calendario"] = df_prog_show["day"] + 1
+    df_prog_show["en_horario"] = df_prog_show["treatment_end"] <= 47
+    
+    st.dataframe(df_prog_show[[
+        "day", "dia_calendario", "patient_id", "patient_type", "cycle", "session", 
+        "pharmacy_start", "pharmacy_end", "pharmacy_modules", "wait_after_pharmacy", 
+        "treatment_start", "treatment_end", "treatment_modules", "extra_chair_modules", 
+        "chair_id", "en_horario"
+    ]], use_container_width=True)
 
-with tab4:
-    st.markdown("### Datos Crudos")
-    if not df_res.empty:
-        st.markdown("#### Resumen")
-        st.dataframe(df_res, use_container_width=True)
-    st.markdown("#### Programación")
-    st.dataframe(f_prog, use_container_width=True)
-    st.markdown("#### Ocupación")
-    st.dataframe(f_ocup, use_container_width=True)
+# ---------------------------------------------------------
+# 5. EXECUTE VIEW ROUTER
+# ---------------------------------------------------------
+if current_view == "Ejecutiva":
+    render_executive_view()
+elif current_view == "Recursos":
+    render_recursos_view()
+elif current_view == "Sillas intradía":
+    day_df = df_prog[df_prog["day"] == selected_day]
+    if not day_df.empty:
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Sesiones", len(day_df))
+        c2.metric("Pacientes Únicos", day_df["patient_id"].nunique())
+        c3.metric("Módulos de Tratamiento", day_df["treatment_modules"].sum())
+        c4.metric("Módulos Extra", day_df["extra_chair_modules"].sum())
+    render_sillas_view(selected_day)
+elif current_view == "Pacientes intradía":
+    render_pacientes_view(selected_day)
+elif current_view == "Día crítico":
+    render_critical_days_view()
+elif current_view == "Datos":
+    render_datos_view()
