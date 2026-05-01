@@ -79,9 +79,13 @@ def compute_kpis(f_prog, f_ocup):
     total_extra = f_prog["extra_chair_modules"].sum() if total_sessions > 0 else 0
     days_extra = f_prog[f_prog["extra_chair_modules"] > 0]["day"].nunique() if total_sessions > 0 else 0
     max_wait = f_prog["wait_after_pharmacy"].max() if total_sessions > 0 else 0
+    avg_wait = f_prog["wait_after_pharmacy"].mean() if total_sessions > 0 else 0
     
     total_chairs_cap = f_ocup["chair_capacity"].sum() if not f_ocup.empty else 0
     util_chairs = (f_ocup["chairs_used"].sum() / total_chairs_cap * 100) if total_chairs_cap > 0 else 0
+    
+    reg_ocup = f_ocup[f_ocup["is_extra"] == 0]
+    util_chairs_reg = (reg_ocup["chairs_used"].sum() / reg_ocup["chair_capacity"].sum() * 100) if not reg_ocup.empty and reg_ocup["chair_capacity"].sum() > 0 else 0
     
     n_col = "nurse_events" if "nurse_events" in f_ocup.columns else "nurse_starts"
     if n_col == "nurse_starts" and "nurse_ends" in f_ocup.columns:
@@ -95,8 +99,8 @@ def compute_kpis(f_prog, f_ocup):
     
     return {
         "sessions": total_sessions, "unique_patients": unique_patients, "cumplimiento": cumplimiento,
-        "total_extra": total_extra, "days_extra": days_extra, "max_wait": max_wait,
-        "util_chairs": util_chairs, "util_nurses": util_nurses, "util_pharm": util_pharm,
+        "total_extra": total_extra, "days_extra": days_extra, "max_wait": max_wait, "avg_wait": avg_wait,
+        "util_chairs": util_chairs, "util_chairs_reg": util_chairs_reg, "util_nurses": util_nurses, "util_pharm": util_pharm,
         "most_loaded_day": most_loaded_day
     }
 
@@ -217,6 +221,7 @@ if (df_prog["treatment_end"] > 55).any():
 kpis = compute_kpis(df_prog, df_ocup)
 
 def render_resumen():
+    st.markdown("<br>", unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
     c1.metric("Sesiones Realizadas", f"{kpis['sessions']:,}")
     c2.metric("Pacientes Únicos", f"{kpis['unique_patients']:,}")
@@ -262,6 +267,39 @@ def render_resumen():
     crit_df = crit_df.sort_values(by=["modulos_extra", "modulos_trat", "espera_max", "max_nurses", "max_pharmacy"], ascending=[False, False, False, False, False]).head(5)
     st.dataframe(crit_df[["day", "dia_calendario", "sesiones", "modulos_trat", "modulos_extra", "espera_max", "max_chairs", "max_nurses", "max_pharmacy"]], use_container_width=True)
 
+def render_kpis_view():
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("### Indicadores de Desempeño Operacional (KPIs)")
+    st.markdown("Esta vista consolida todos los indicadores de rendimiento propuestos para el período seleccionado.")
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    st.markdown("##### 1. Demanda y Flujo")
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("1. Total Sesiones", f"{kpis['sessions']:,}")
+    c2.metric("2. Pacientes Únicos", f"{kpis['unique_patients']:,}")
+    c3.metric("3. Día Más Cargado", f"Día {kpis['most_loaded_day']}")
+    c4.metric("4. Cumpl. Horario Reg.", f"{kpis['cumplimiento']:.1f}%")
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("##### 2. Tiempos de Espera (Farmacia → Silla)")
+    c5, c6, c7, c8 = st.columns(4)
+    c5.metric("5. Espera Máxima", f"{kpis['max_wait']} mod")
+    c6.metric("6. Espera Promedio", f"{kpis['avg_wait']:.2f} mod")
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("##### 3. Capacidad y Utilización de Recursos")
+    c9, c10, c11, c12 = st.columns(4)
+    c9.metric("7. Utilización Sillas (Total)", f"{kpis['util_chairs']:.1f}%")
+    c10.metric("8. Util. Sillas (Solo Reg.)", f"{kpis['util_chairs_reg']:.1f}%")
+    c11.metric("9. Ocupación Enfermería", f"{kpis['util_nurses']:.1f}%")
+    c12.metric("10. Ocupación Farmacia", f"{kpis['util_pharm']:.1f}%")
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("##### 4. Saturación Extraordinaria")
+    c13, c14, c15, c16 = st.columns(4)
+    c13.metric("11. Módulos Extra Totales", f"{kpis['total_extra']:,}")
+    c14.metric("12. Días con Extra", f"{kpis['days_extra']}")
+
 def render_dia_especifico(day):
     day_df = df_prog[df_prog["day"] == day]
     day_ocup = df_ocup[df_ocup["day"] == day].copy()
@@ -269,6 +307,7 @@ def render_dia_especifico(day):
         st.info("No hay datos para el día seleccionado.")
         return
         
+    st.markdown("<br>", unsafe_allow_html=True)
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Sesiones", len(day_df))
     c2.metric("Pacientes Únicos", day_df["patient_id"].nunique())
@@ -344,6 +383,7 @@ def render_dia_especifico(day):
             st.plotly_chart(fig3, use_container_width=True)
 
 def render_datos():
+    st.markdown("<br>", unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1: st.download_button("📥 Descargar Programación (CSV)", df_prog.to_csv(index=False), "programacion_filtrada.csv", "text/csv")
     with col2: st.download_button("📥 Descargar Ocupación (CSV)", df_ocup.to_csv(index=False), "ocupacion_filtrada.csv", "text/csv")
@@ -364,8 +404,9 @@ def render_datos():
 # ---------------------------------------------------------
 # 6. ROUTER
 # ---------------------------------------------------------
-tab1, tab2, tab3 = st.tabs(["📊 Resumen", "📅 Día Específico", "🗄️ Datos"])
+tab1, tab_kpi, tab2, tab3 = st.tabs(["📊 Resumen", "🎯 KPIs", "📅 Día Específico", "🗄️ Datos"])
 
 with tab1: render_resumen()
+with tab_kpi: render_kpis_view()
 with tab2: render_dia_especifico(selected_day)
 with tab3: render_datos()
