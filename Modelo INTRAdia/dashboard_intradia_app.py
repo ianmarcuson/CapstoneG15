@@ -39,11 +39,11 @@ if uploaded_file is not None:
 else:
     # Look in local dir and typical subdirs
     possible_paths = [
-        "solution_deldia_v2.xlsx",
+        "Modelo INTRAdia/Modelo INTRAdia/475_solution_deldia_v2.xlsx",
+        "Modelo INTRAdia/475_solution_deldia_v2.xlsx",
         "475_solution_deldia_v2.xlsx",
         "Modelo INTRAdia/solution_deldia_v2.xlsx",
-        "Modelo INTRAdia/475_solution_deldia_v2.xlsx",
-        "Modelo INTRAdia/Modelo INTRAdia/475_solution_deldia_v2.xlsx"
+        "solution_deldia_v2.xlsx"
     ]
     for p in possible_paths:
         if os.path.exists(p):
@@ -67,12 +67,13 @@ if df_ocup is None or df_ocup.empty:
 min_day = int(df_prog["day"].min())
 max_day = int(df_prog["day"].max())
 
-if min_day == max_day:
-    range_days = (min_day, max_day)
-else:
-    range_days = st.sidebar.slider("Rango de Días", min_value=min_day, max_value=max_day, value=(min_day, max_day))
+col_start, col_end = st.sidebar.columns(2)
+start_d = col_start.number_input("Día Inicio", min_value=0, max_value=1000, value=min_day)
+end_d = col_end.number_input("Día Término", min_value=0, max_value=1000, value=max_day)
 
-start_d, end_d = range_days
+if start_d > end_d:
+    st.sidebar.error("El día de inicio debe ser menor o igual al día de término.")
+    st.stop()
 
 st.sidebar.markdown("---")
 specific_day = st.sidebar.number_input("Seleccionar Día para Detalle", min_value=start_d, max_value=end_d, value=start_d)
