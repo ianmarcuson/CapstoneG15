@@ -213,7 +213,7 @@ if df_prog.empty:
     st.stop()
 
 st.sidebar.markdown("### Vistas Específicas")
-day_options = [f"Día {d} | Cal {int(d)+1}" for d in sorted(valid_days)]
+day_options = [f"Día {int(d)} | Cal {int(d)+1}" for d in sorted(valid_days)]
 selected_day_str = st.sidebar.selectbox("Seleccionar Día Específico", options=day_options)
 selected_day = int(selected_day_str.split(" ")[1])
 
