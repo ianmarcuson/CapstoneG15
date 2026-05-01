@@ -37,11 +37,18 @@ file_to_load = None
 if uploaded_file is not None:
     file_to_load = uploaded_file
 else:
-    # Look in local dir
-    if os.path.exists("solution_deldia_v2.xlsx"):
-        file_to_load = "solution_deldia_v2.xlsx"
-    elif os.path.exists("475_solution_deldia_v2.xlsx"):
-        file_to_load = "475_solution_deldia_v2.xlsx"
+    # Look in local dir and typical subdirs
+    possible_paths = [
+        "solution_deldia_v2.xlsx",
+        "475_solution_deldia_v2.xlsx",
+        "Modelo INTRAdia/solution_deldia_v2.xlsx",
+        "Modelo INTRAdia/475_solution_deldia_v2.xlsx",
+        "Modelo INTRAdia/Modelo INTRAdia/475_solution_deldia_v2.xlsx"
+    ]
+    for p in possible_paths:
+        if os.path.exists(p):
+            file_to_load = p
+            break
 
 if file_to_load is None:
     st.error("No se encontró 'solution_deldia_v2.xlsx' ni '475_solution_deldia_v2.xlsx' en el directorio. Por favor carga un archivo en la barra lateral.")
