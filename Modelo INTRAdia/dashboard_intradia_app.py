@@ -251,6 +251,16 @@ def render_resumen():
     daily = df_prog.groupby("day").agg(Tratamiento=("treatment_modules", "sum"), Sesiones=("session", "count"), Extra=("extra_chair_modules", "sum")).reset_index()
     fig = px.bar(daily, x="day", y=["Tratamiento", "Extra"], color_discrete_sequence=["#10b981", "#f59e0b"], barmode="stack")
     fig.add_trace(go.Scatter(x=daily["day"], y=daily["Sesiones"], name="Sesiones", mode="lines+markers", yaxis="y2", line=dict(color="#3b82f6")))
+    
+    if not df_ocup.empty:
+        lim_reg = df_ocup[df_ocup["is_extra"] == 0].groupby("day")["chair_capacity"].sum().max()
+        lim_max = df_ocup.groupby("day")["chair_capacity"].sum().max()
+    else:
+        lim_reg, lim_max = 720, 840
+        
+    fig.add_trace(go.Scatter(x=daily["day"], y=[lim_reg]*len(daily), name="Límite Regular", mode="lines", line=dict(color="#ef4444", dash="dash")))
+    fig.add_trace(go.Scatter(x=daily["day"], y=[lim_max]*len(daily), name="Límite Máx (c/Extra)", mode="lines", line=dict(color="#991b1b", dash="dot")))
+    
     fig.update_layout(plot_bgcolor="rgba(0,0,0,0)", yaxis=dict(title="Módulos"), yaxis2=dict(title="Sesiones", overlaying="y", side="right"))
     st.plotly_chart(fig, use_container_width=True)
 
