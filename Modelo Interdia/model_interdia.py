@@ -52,9 +52,9 @@ def cargar_datos():
     df_arribos = pd.read_excel(P.EXCEL_PATH, sheet_name=P.SHEET_ARRIBOS)
     df_bajas   = pd.read_excel(P.EXCEL_PATH, sheet_name=P.SHEET_BAJAS)
 
-    print(f"    ✓ Configuración de tipos: {len(df_config)} tipos de paciente")
-    print(f"    ✓ Horizonte solicitado:   {P.HORIZONTE_DIAS} días")
-    print(f"    ✓ Días en Motor_Arribos:  {len(df_arribos)} días")
+    print(f"    > Configuración de tipos: {len(df_config)} tipos de paciente")
+    print(f"    > Horizonte solicitado:   {P.HORIZONTE_DIAS} días")
+    print(f"    > Días en Motor_Arribos:  {len(df_arribos)} días")
 
     return df_config, df_params, df_arribos, df_bajas
 
@@ -540,7 +540,7 @@ def extraer_resultados(model, x, y, W, pacientes_validos, dias, K, K_ext):
             f"ERROR: La solución excede la capacidad máxima diaria de {cap_total} módulos "
             f"(máximo encontrado: {max_ocup:.1f} módulos)."
         )
-    print(f"      ✓ Validación capacidad total: ninguna jornada supera {cap_total} módulos.")
+    print(f"      > Validación capacidad total: ninguna jornada supera {cap_total} módulos.")
 
     # -------------------------------------------------------------------------
     # Validación: W del modelo vs ocupación máxima real calculada
@@ -702,9 +702,9 @@ def exportar_resultados(model, df_schedule, df_resumen, pacientes_validos, dias,
         df_ocupacion.to_excel(writer, sheet_name="Ocupación Diaria", index=False)
         df_resumen_interday.to_excel(writer, sheet_name="Resumen", index=False)
 
-    print(f"\n  ✓ Schedule exportado a:  {csv_path}")
-    print(f"  ✓ Resumen exportado a:   {summary_path}")
-    print(f"  ✓ Output intradía XLSX:  {xlsx_path}")
+    print(f"\n  > Schedule exportado a:  {csv_path}")
+    print(f"  > Resumen exportado a:   {summary_path}")
+    print(f"  > Output intradía XLSX:  {xlsx_path}")
 
     return xlsx_path  # retorna path para el CSV comparativo
 
@@ -869,7 +869,7 @@ def main():
         horizonte_dias=P.HORIZONTE_DIAS,
         dia_inicio=P.DIA_INICIO
     )
-    print(f"    ✓ Pacientes generados (total llegadas): {len(pacientes)}")
+    print(f"    > Pacientes generados (total llegadas): {len(pacientes)}")
 
     # --- Modo: una corrida o múltiples escenarios ---
     if not P.RUN_ALL_SCENARIOS:
@@ -915,7 +915,7 @@ def main():
         print(f"  {'-'*42} {'----':>4s} {'--------':>8s} {'-------':>7s} "
               f"{'-------':>7s} {'--------':>8s} {'-------':>7s} {'------':>6s} {'-----':>5s}")
         for r in resultados:
-            fact = "✓" if r["solution_found"] else "✗"
+            fact = ">" if r["solution_found"] else "✗"
             max_o  = f"{r['max_ocupacion_diaria']:.0f}" if r["max_ocupacion_diaria"] is not None else "-"
             ext_d  = f"{r['dias_con_modulos_extra']}"   if r["solution_found"] else "-"
             tot_e  = f"{r['total_modulos_extra']:.0f}"  if r["solution_found"] else "-"
@@ -926,7 +926,7 @@ def main():
             print(f"  {r['scenario_name']:42s} {fact:>4s} {max_o:>8s} {ext_d:>7s} "
                   f"{tot_e:>7s} {esp_p:>8s} {esp_m:>7s} {gap:>6s} {rt:>5s}")
 
-        print(f"\n  ✓ Resumen comparativo exportado a: {comp_path}")
+        print(f"\n  > Resumen comparativo exportado a: {comp_path}")
         print(f"{'='*65}")
 
         if n_ok == 0:
