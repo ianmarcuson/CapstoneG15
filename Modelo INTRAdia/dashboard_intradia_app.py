@@ -152,9 +152,6 @@ def compute_kpis(f_prog, f_ocup, f_res=None, f_pend=None):
     else:
         postponed_sessions = 0
 
-    # Atraso promedio por paciente en días
-    avg_delay_days = round(float(f_prog["delay_days"].mean()), 2) if total_sessions > 0 and "delay_days" in f_prog.columns else 0.0
-
     # Pacientes no atendidos al final del horizonte (en hoja Pendientes)
     unattended = f_pend["patient_id"].nunique() if f_pend is not None and not f_pend.empty and "patient_id" in f_pend.columns else 0
 
@@ -166,7 +163,6 @@ def compute_kpis(f_prog, f_ocup, f_res=None, f_pend=None):
         "util_nurses": util_nurses, "util_pharm": util_pharm,
         "most_loaded_day": most_loaded_day,
         "postponed_sessions": postponed_sessions,
-        "avg_delay_days": avg_delay_days,
         "unattended": unattended,
     }
 
@@ -448,10 +444,9 @@ def render_kpis_view():
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("##### 5. Cobertura y Atrasos")
     st.caption("⚠️ Indicadores que capturan el costo oculto de los modelos: sesiones que se postponen o quedan sin atender.")
-    c17, c18, c19, c20 = st.columns(4)
+    c17, c18, c19 = st.columns(3)
     _render_metric(c17, "13. Sesiones Postponadas", "postponed_sessions", inverse=True)
-    _render_metric(c18, "14. Atraso Prom. por Paciente", "avg_delay_days", inverse=True)
-    _render_metric(c19, "15. Pacientes No Atendidos", "unattended", inverse=True)
+    _render_metric(c18, "14. Pacientes No Atendidos", "unattended", inverse=True)
 
 def render_dia_especifico(day):
     day_df = df_prog[df_prog["day"] == day]
