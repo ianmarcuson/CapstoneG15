@@ -369,7 +369,9 @@ class ColumnGenerationDayModelV2:
                 yield self._make_pattern(p, treatment_start, treatment_start)
             else:
                 for pharmacy_start in range(0, latest_pharmacy_start + 1):
-                    yield self._make_pattern(p, pharmacy_start, treatment_start)
+                    # Restricción: la farmacia cierra en el módulo 20
+                    if pharmacy_start + Fp - 1 <= 20:
+                        yield self._make_pattern(p, pharmacy_start, treatment_start)
 
     def initialize_patterns(self):
         chairs_used = [0] * len(self.M)
