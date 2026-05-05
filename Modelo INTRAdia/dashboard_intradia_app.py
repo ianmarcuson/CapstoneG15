@@ -293,7 +293,7 @@ def render_resumen():
     fig.add_trace(go.Scatter(x=daily["day"], y=[lim_max]*len(daily), name="Límite Máx (c/Extra)", mode="lines", line=dict(color="#991b1b", dash="dot")))
     
     fig.update_layout(plot_bgcolor="rgba(0,0,0,0)", yaxis=dict(title="Módulos"), yaxis2=dict(title="Sesiones", overlaying="y", side="right"))
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
     st.markdown("#### Top 5 Días Críticos")
     crit_stats = df_prog.groupby("day").agg(sesiones=("session", "count"), modulos_trat=("treatment_modules", "sum"), modulos_extra=("extra_chair_modules", "sum"), espera_max=("wait_after_pharmacy", "max")).reset_index()
@@ -306,7 +306,7 @@ def render_resumen():
     crit_df = pd.merge(crit_stats, crit_ocup, on="day", how="left")
     crit_df["dia_calendario"] = crit_df["day"] + 1
     crit_df = crit_df.sort_values(by=["modulos_extra", "modulos_trat", "espera_max", "max_nurses", "max_pharmacy"], ascending=[False, False, False, False, False]).head(5)
-    st.dataframe(crit_df[["day", "dia_calendario", "sesiones", "modulos_trat", "modulos_extra", "espera_max", "max_chairs", "max_nurses", "max_pharmacy"]], use_container_width=True)
+    st.dataframe(crit_df[["day", "dia_calendario", "sesiones", "modulos_trat", "modulos_extra", "espera_max", "max_chairs", "max_nurses", "max_pharmacy"]], width='stretch')
 
 def render_kpis_view():
     st.markdown("<br>", unsafe_allow_html=True)
@@ -385,7 +385,7 @@ def render_dia_especifico(day):
             fig.add_trace(go.Bar(x=[r["treatment_modules"]], y=[f"Silla {int(r['chair_id'])}"], base=[r["treatment_start"]], orientation="h", marker_color=color_map[r["patient_type"]], name=f"Tipo {r['patient_type']}", hoverinfo="text", hovertext=hover, text=f"Pat {r['patient_id']}", textposition="inside"))
         fig.add_vline(x=48, line_width=2, line_dash="dash", line_color="#f43f5e", annotation_text="Jornada Extra")
         fig.update_layout(barmode="stack", showlegend=False, xaxis=dict(title="Módulos", range=[0, 56], tick0=0, dtick=4, gridcolor="#f0f0f0"), yaxis=dict(type="category", categoryorder="array", categoryarray=[f"Silla {i}" for i in range(15, 0, -1)]), plot_bgcolor="rgba(0,0,0,0)", margin=dict(l=80, r=20, t=40, b=40))
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
         
     with t_pacs:
         fig2 = go.Figure()
@@ -407,7 +407,7 @@ def render_dia_especifico(day):
         if treat_x: fig2.add_trace(go.Bar(x=treat_x, y=treat_y, base=treat_base, orientation='h', name='Tratamiento', marker_color="#10b981", hovertext=treat_h, hoverinfo='text'))
         fig2.add_vline(x=48, line_width=2, line_dash="dash", line_color="#f43f5e")
         fig2.update_layout(barmode="stack", xaxis=dict(title="Módulos", range=[0, 56], tick0=0, dtick=4, gridcolor="#f0f0f0"), yaxis=dict(type="category"), plot_bgcolor="rgba(0,0,0,0)")
-        st.plotly_chart(fig2, use_container_width=True)
+        st.plotly_chart(fig2, width='stretch')
         
     with t_recs:
         if day_ocup.empty: st.info("No hay datos de ocupación.")
@@ -421,7 +421,7 @@ def render_dia_especifico(day):
             fig3.add_trace(go.Scatter(x=day_ocup["module"], y=day_ocup["pharmacy_capacity"], name="Cap Farmacia", mode="lines", line=dict(dash="dash", color="#a0aec0")))
             fig3.add_vline(x=48, line_width=2, line_dash="dash", line_color="#f43f5e")
             fig3.update_layout(barmode="group", plot_bgcolor="rgba(0,0,0,0)", xaxis=dict(gridcolor="#f0f0f0"))
-            st.plotly_chart(fig3, use_container_width=True)
+            st.plotly_chart(fig3, width='stretch')
 
 def render_datos():
     st.markdown("<br>", unsafe_allow_html=True)
@@ -438,9 +438,9 @@ def render_datos():
         df_prog_show = df_prog.copy()
         df_prog_show["dia_calendario"] = df_prog_show["day"] + 1
         df_prog_show["en_horario"] = df_prog_show["treatment_end"] <= 47
-        st.dataframe(df_prog_show, use_container_width=True)
-    if show_ocup: st.dataframe(df_ocup, use_container_width=True)
-    if show_res and not df_res.empty: st.dataframe(df_res, use_container_width=True)
+        st.dataframe(df_prog_show, width='stretch')
+    if show_ocup: st.dataframe(df_ocup, width='stretch')
+    if show_res and not df_res.empty: st.dataframe(df_res, width='stretch')
 
 # ---------------------------------------------------------
 # 6. ROUTER
