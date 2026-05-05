@@ -16,7 +16,7 @@ st.markdown("""
     }
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    header {visibility: hidden;}
+    /* El header no se oculta porque contiene el botón nativo del sidebar */
     
     /* Botón de expandir menú lateral (siempre visible, color negro) */
     [data-testid="collapsedControl"] {
