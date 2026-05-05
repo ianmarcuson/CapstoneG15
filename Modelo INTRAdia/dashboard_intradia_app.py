@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 import os
 
 # Fintual style config
-st.set_page_config(page_title="Dashboard Intradía", layout="wide")
+st.set_page_config(page_title="Dashboard Intradía", layout="wide", initial_sidebar_state="expanded")
 
 st.markdown("""
 <style>
@@ -18,6 +18,37 @@ st.markdown("""
     footer {visibility: hidden;}
     header {visibility: hidden;}
     
+    /* Botón de expandir menú lateral (siempre visible, color negro) */
+    [data-testid="collapsedControl"] {
+        background-color: #000000 !important;
+        color: #ffffff !important;
+        border-radius: 6px !important;
+        opacity: 1 !important;
+        padding: 5px !important;
+        box-shadow: 0px 2px 5px rgba(0,0,0,0.5) !important;
+        z-index: 999999 !important;
+        transition: none !important;
+    }
+    [data-testid="collapsedControl"]:hover {
+        background-color: #333333 !important;
+    }
+    [data-testid="collapsedControl"] svg {
+        fill: #ffffff !important;
+        color: #ffffff !important;
+    }
+    
+    /* Botón de colapsar menú lateral (dentro del sidebar) */
+    [data-testid="stSidebar"] button[kind="header"] {
+        background-color: #000000 !important;
+        color: #ffffff !important;
+        border-radius: 6px !important;
+        opacity: 1 !important;
+    }
+    [data-testid="stSidebar"] button[kind="header"] svg {
+        fill: #ffffff !important;
+        color: #ffffff !important;
+    }
+
     .stTabs [data-baseweb="tab-list"] {
         gap: 15px;
         padding-bottom: 5px;
