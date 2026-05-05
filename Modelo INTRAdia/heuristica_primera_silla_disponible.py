@@ -174,8 +174,10 @@ class HeuristicDayScheduler:
                     return treat_start, treat_start
             else:
                 for pharm_start in range(0, treat_start - Fp + 1):
-                    if self.check_capacity(pharm_start, Fp, treat_start, Dp):
-                        return pharm_start, treat_start
+                    # Restricción: la farmacia cierra en el módulo 20
+                    if pharm_start + Fp - 1 <= 20:
+                        if self.check_capacity(pharm_start, Fp, treat_start, Dp):
+                            return pharm_start, treat_start
         return None, None
 
     def assign_session(self, session, pharm_start, treat_start):
