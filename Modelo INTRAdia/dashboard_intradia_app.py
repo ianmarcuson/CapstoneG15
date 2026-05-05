@@ -183,6 +183,9 @@ def get_critical_days(df_prog, df_ocup):
 # Usar ruta absoluta desde la ubicación del script para evitar problemas con el CWD de Streamlit
 SCRIPT_DIR = Path(__file__).resolve().parent
 
+# Horizonte máximo de visualización (días internos 0-indexed)
+DAY_MAX_VIZ = 240
+
 possible_paths = [
     SCRIPT_DIR / "test-240.xlsx",
     SCRIPT_DIR / "475_solution_deldia_v2.xlsx",
@@ -209,6 +212,10 @@ if df_prog_raw is None or df_prog_raw.empty:
     st.error("Error leyendo 'Programacion'.")
     st.stop()
 
+# Limitar al horizonte de visualización
+df_prog_raw = df_prog_raw[df_prog_raw["day"] <= DAY_MAX_VIZ].copy()
+df_ocup_raw = df_ocup_raw[df_ocup_raw["day"] <= DAY_MAX_VIZ].copy()
+
 if "chair_id" not in df_prog_raw.columns:
     df_prog_raw = assign_chairs_for_visualization(df_prog_raw)
 
@@ -224,6 +231,9 @@ for p in possible_base_paths:
         break
 
 if df_prog_raw_base is not None and not df_prog_raw_base.empty:
+    # Limitar al horizonte de visualización
+    df_prog_raw_base = df_prog_raw_base[df_prog_raw_base["day"] <= DAY_MAX_VIZ].copy()
+    df_ocup_raw_base = df_ocup_raw_base[df_ocup_raw_base["day"] <= DAY_MAX_VIZ].copy()
     if "chair_id" not in df_prog_raw_base.columns:
         df_prog_raw_base = assign_chairs_for_visualization(df_prog_raw_base)
 
