@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 import os
@@ -73,13 +74,14 @@ st.markdown("""
 # 1. CORE FUNCTIONS
 # ---------------------------------------------------------
 
-@st.cache_data
 def load_data(file_path):
     try:
         xls = pd.ExcelFile(file_path)
         df_res = xls.parse("Resumen_Dias") if "Resumen_Dias" in xls.sheet_names else pd.DataFrame()
         df_prog = xls.parse("Programacion")
         df_ocup = xls.parse("Ocupacion_Modulos")
+        if 'wait_after_pharmacy' not in df_prog.columns:
+            df_prog['wait_after_pharmacy'] = np.where(df_prog['pharmacy_modules'] > 0, df_prog['treatment_start'] - df_prog['pharmacy_end'] - 1, 0)
         return df_res, df_prog, df_ocup
     except Exception as e:
         return None, None, None
@@ -182,6 +184,22 @@ if df_prog_raw is None or df_prog_raw.empty:
 if "chair_id" not in df_prog_raw.columns:
     df_prog_raw = assign_chairs_for_visualization(df_prog_raw)
 
+# Load Base Heuristic
+df_res_base, df_prog_raw_base, df_ocup_raw_base = None, None, None
+possible_base_paths = [
+    "Modelo INTRAdia/Modelo INTRAdia/solution_heuristica.xlsx",
+    "Modelo INTRAdia/solution_heuristica.xlsx",
+    "solution_heuristica.xlsx"
+]
+for p in possible_base_paths:
+    if os.path.exists(p):
+        df_res_base, df_prog_raw_base, df_ocup_raw_base = load_data(p)
+        break
+
+if df_prog_raw_base is not None and not df_prog_raw_base.empty:
+    if "chair_id" not in df_prog_raw_base.columns:
+        df_prog_raw_base = assign_chairs_for_visualization(df_prog_raw_base)
+
 # ---------------------------------------------------------
 # 3. SIDEBAR FILTERS
 # ---------------------------------------------------------
@@ -233,6 +251,18 @@ if df_prog.empty:
     st.warning("No hay datos que coincidan con los filtros avanzados.")
     st.stop()
 
+# Aplicar filtros a Base
+if df_prog_raw_base is not None and not df_prog_raw_base.empty:
+    df_prog_base = df_prog_raw_base[(df_prog_raw_base["day"] >= start_d) & (df_prog_raw_base["day"] <= end_d)].copy()
+    df_ocup_base = df_ocup_raw_base[(df_ocup_raw_base["day"] >= start_d) & (df_ocup_raw_base["day"] <= end_d)].copy()
+    
+    if sel_ptypes: df_prog_base = df_prog_base[df_prog_base["patient_type"].isin(sel_ptypes)]
+    if sel_pids: df_prog_base = df_prog_base[df_prog_base["patient_id"].isin(sel_pids)]
+    if show_extra: df_prog_base = df_prog_base[df_prog_base["extra_chair_modules"] > 0]
+    
+    df_prog_base = df_prog_base[df_prog_base["day"].isin(valid_days)]
+    df_ocup_base = df_ocup_base[df_ocup_base["day"].isin(valid_days)]
+
 # ---------------------------------------------------------
 # 4. MAIN HEADER
 # ---------------------------------------------------------
@@ -250,6 +280,7 @@ if (df_prog["treatment_end"] > 55).any():
 # 5. RENDERERS
 # ---------------------------------------------------------
 kpis = compute_kpis(df_prog, df_ocup)
+kpis_base = compute_kpis(df_prog_base, df_ocup_base) if df_prog_raw_base is not None and not df_prog_raw_base.empty else None
 
 def render_resumen():
     st.markdown("<br>", unsafe_allow_html=True)
@@ -314,32 +345,72 @@ def render_kpis_view():
     st.markdown("Esta vista consolida todos los indicadores de rendimiento propuestos para el período seleccionado.")
     st.markdown("<br>", unsafe_allow_html=True)
     
+    modo = "Solo Modelo Real"
+    if kpis_base is not None:
+        modo = st.radio(
+            "Seleccione el modo de visualización",
+            options=["Solo Modelo Real", "Solo Modelo Base (Heurística)", "Comparación (Real vs Base)"],
+            horizontal=True
+        )
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+    def _render_metric(col, label, k, is_percent=False, is_mod=False, is_day=False, inverse=False):
+        val_real = kpis[k]
+        val_base = kpis_base[k] if kpis_base is not None else 0
+        
+        fmt = "{:.1f}%" if is_percent else ("{} mod" if is_mod else ("Día {}" if is_day else "{:,}"))
+        if is_day and val_real is not None:
+            try: val_real = int(val_real)
+            except: pass
+        if is_day and val_base is not None:
+            try: val_base = int(val_base)
+            except: pass
+            
+        vr_str = fmt.format(val_real) if val_real is not None else "N/A"
+        vb_str = fmt.format(val_base) if val_base is not None else "N/A"
+        
+        if modo == "Solo Modelo Real":
+            col.metric(label, vr_str)
+        elif modo == "Solo Modelo Base (Heurística)":
+            col.metric(label, vb_str)
+        else:
+            if val_real is not None and val_base is not None and isinstance(val_real, (int, float)) and isinstance(val_base, (int, float)):
+                delta = val_real - val_base
+                # Format delta correctly
+                delta_str = f"{delta:.1f}" if isinstance(delta, float) else str(delta)
+                if is_percent: delta_str += "%"
+                elif is_mod: delta_str += " mod"
+                elif is_day: delta_str = f"{delta_str} días"
+                col.metric(label, vr_str, delta=delta_str, delta_color="inverse" if inverse else "normal")
+            else:
+                col.metric(label, vr_str)
+
     st.markdown("##### 1. Demanda y Flujo")
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("1. Total Sesiones", f"{kpis['sessions']:,}")
-    c2.metric("2. Pacientes Únicos", f"{kpis['unique_patients']:,}")
-    c3.metric("3. Día Más Cargado", f"Día {kpis['most_loaded_day']}")
-    c4.metric("4. Cumpl. Horario Reg.", f"{kpis['cumplimiento']:.1f}%")
+    _render_metric(c1, "1. Total Sesiones", "sessions")
+    _render_metric(c2, "2. Pacientes Únicos", "unique_patients")
+    _render_metric(c3, "3. Día Más Cargado", "most_loaded_day", is_day=True, inverse=True)
+    _render_metric(c4, "4. Cumpl. Horario Reg.", "cumplimiento", is_percent=True)
     
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("##### 2. Tiempos de Espera (Farmacia → Silla)")
     c5, c6, c7, c8 = st.columns(4)
-    c5.metric("5. Espera Máxima", f"{kpis['max_wait']} mod")
-    c6.metric("6. Espera Promedio", f"{kpis['avg_wait']:.2f} mod")
+    _render_metric(c5, "5. Espera Máxima", "max_wait", is_mod=True, inverse=True)
+    _render_metric(c6, "6. Espera Promedio", "avg_wait", is_mod=True, inverse=True)
     
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("##### 3. Capacidad y Utilización de Recursos")
     c9, c10, c11, c12 = st.columns(4)
-    c9.metric("7. Utilización Sillas (Total)", f"{kpis['util_chairs']:.1f}%")
-    c10.metric("8. Util. Sillas (Solo Reg.)", f"{kpis['util_chairs_reg']:.1f}%")
-    c11.metric("9. Ocupación Enfermería", f"{kpis['util_nurses']:.1f}%")
-    c12.metric("10. Ocupación Farmacia", f"{kpis['util_pharm']:.1f}%")
+    _render_metric(c9, "7. Utilización Sillas (Total)", "util_chairs", is_percent=True)
+    _render_metric(c10, "8. Util. Sillas (Solo Reg.)", "util_chairs_reg", is_percent=True)
+    _render_metric(c11, "9. Ocupación Enfermería", "util_nurses", is_percent=True)
+    _render_metric(c12, "10. Ocupación Farmacia", "util_pharm", is_percent=True)
     
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("##### 4. Saturación Extraordinaria")
     c13, c14, c15, c16 = st.columns(4)
-    c13.metric("11. Módulos Extra Totales", f"{kpis['total_extra']:,}")
-    c14.metric("12. Días con Extra", f"{kpis['days_extra']}")
+    _render_metric(c13, "11. Módulos Extra Totales", "total_extra", inverse=True)
+    _render_metric(c14, "12. Días con Extra", "days_extra", inverse=True)
 
 def render_dia_especifico(day):
     day_df = df_prog[df_prog["day"] == day]

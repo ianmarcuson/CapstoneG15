@@ -112,18 +112,21 @@ def generate_sessions(arrivals_path, patient_types, max_days):
                 if n_llegadas > 0 and tipo in patient_types:
                     pt = patient_types[tipo]
                     for _ in range(n_llegadas):
-                        for c in range(1, pt["ciclos"] + 1):
-                            for s in range(1, pt["sesiones"] + 1):
-                                t_min = dia + (c - 1) * pt["tbc"] + (s - 1) * pt["tbs"]
-                                sessions.append({
-                                    "patient_id": patient_id_counter,
-                                    "patient_type": tipo,
-                                    "cycle": c,
-                                    "session": s,
-                                    "t_min": t_min,
-                                    "modules": pt["modulos"],
-                                    "pharmacy_modules": pt["modulos_lab"]
-                                })
+                        ultimo_dia_minimo = dia + (pt["ciclos"] - 1) * pt["tbc"] + (pt["sesiones"] - 1) * pt["tbs"]
+                        
+                        if ultimo_dia_minimo <= max_days:
+                            for c in range(1, pt["ciclos"] + 1):
+                                for s in range(1, pt["sesiones"] + 1):
+                                    t_min = dia + (c - 1) * pt["tbc"] + (s - 1) * pt["tbs"]
+                                    sessions.append({
+                                        "patient_id": patient_id_counter,
+                                        "patient_type": tipo,
+                                        "cycle": c,
+                                        "session": s,
+                                        "t_min": t_min,
+                                        "modules": pt["modulos"],
+                                        "pharmacy_modules": pt["modulos_lab"]
+                                    })
                         patient_id_counter += 1
                         
     return pd.DataFrame(sessions)
