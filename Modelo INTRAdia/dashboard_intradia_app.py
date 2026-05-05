@@ -154,10 +154,10 @@ def get_critical_days(df_prog, df_ocup):
 # 2. INITIALIZATION
 # ---------------------------------------------------------
 possible_paths = [
-    "Modelo INTRAdia/Modelo INTRAdia/475_solution_deldia_v2.xlsx",
+    "Modelo INTRAdia/test-240.xlsx",
     "Modelo INTRAdia/475_solution_deldia_v2.xlsx",
-    "475_solution_deldia_v2.xlsx",
     "Modelo INTRAdia/solution_deldia_v2.xlsx",
+    "test-240.xlsx",
     "solution_deldia_v2.xlsx"
 ]
 
@@ -187,8 +187,9 @@ if "chair_id" not in df_prog_raw.columns:
 # Load Base Heuristic
 df_res_base, df_prog_raw_base, df_ocup_raw_base = None, None, None
 possible_base_paths = [
-    "Modelo INTRAdia/Modelo INTRAdia/solution_heuristica.xlsx",
+    "Modelo INTRAdia/solution_heuristica_240.xlsx",
     "Modelo INTRAdia/solution_heuristica.xlsx",
+    "solution_heuristica_240.xlsx",
     "solution_heuristica.xlsx"
 ]
 for p in possible_base_paths:
