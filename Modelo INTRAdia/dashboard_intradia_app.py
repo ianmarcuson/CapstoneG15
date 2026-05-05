@@ -4,6 +4,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 import os
+from pathlib import Path
 
 # Fintual style config
 st.set_page_config(page_title="Dashboard Intradía", layout="wide", initial_sidebar_state="expanded")
@@ -150,15 +151,13 @@ def get_critical_days(df_prog, df_ocup):
     pharm_crit = df_ocup[df_ocup["pharmacy_used"] == df_ocup["pharmacy_capacity"]]["day"].unique()
     return list(set(extra_days) | set(wait_days) | set(chairs_crit) | set(nurses_crit) | set(pharm_crit))
 
-# ---------------------------------------------------------
-# 2. INITIALIZATION
-# ---------------------------------------------------------
+# Usar ruta absoluta desde la ubicación del script para evitar problemas con el CWD de Streamlit
+SCRIPT_DIR = Path(__file__).resolve().parent
+
 possible_paths = [
-    "Modelo INTRAdia/test-240.xlsx",
-    "Modelo INTRAdia/475_solution_deldia_v2.xlsx",
-    "Modelo INTRAdia/solution_deldia_v2.xlsx",
-    "test-240.xlsx",
-    "solution_deldia_v2.xlsx"
+    SCRIPT_DIR / "test-240.xlsx",
+    SCRIPT_DIR / "475_solution_deldia_v2.xlsx",
+    SCRIPT_DIR / "solution_deldia_v2.xlsx",
 ]
 
 st.sidebar.markdown("### Configuración")
@@ -168,8 +167,8 @@ if uploaded_file:
     file_to_load = uploaded_file
 else:
     for p in possible_paths:
-        if os.path.exists(p):
-            file_to_load = p
+        if Path(p).exists():
+            file_to_load = str(p)
             break
 
 if file_to_load is None:
@@ -187,14 +186,12 @@ if "chair_id" not in df_prog_raw.columns:
 # Load Base Heuristic
 df_res_base, df_prog_raw_base, df_ocup_raw_base = None, None, None
 possible_base_paths = [
-    "Modelo INTRAdia/solution_heuristica_240.xlsx",
-    "Modelo INTRAdia/solution_heuristica.xlsx",
-    "solution_heuristica_240.xlsx",
-    "solution_heuristica.xlsx"
+    SCRIPT_DIR / "solution_heuristica_240.xlsx",
+    SCRIPT_DIR / "solution_heuristica.xlsx",
 ]
 for p in possible_base_paths:
-    if os.path.exists(p):
-        df_res_base, df_prog_raw_base, df_ocup_raw_base = load_data(p)
+    if Path(p).exists():
+        df_res_base, df_prog_raw_base, df_ocup_raw_base = load_data(str(p))
         break
 
 if df_prog_raw_base is not None and not df_prog_raw_base.empty:
