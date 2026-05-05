@@ -207,8 +207,9 @@ if df_prog_raw_base is not None and not df_prog_raw_base.empty:
 min_d, max_d = int(df_prog_raw["day"].min()), int(df_prog_raw["day"].max())
 
 c1, c2 = st.sidebar.columns(2)
-start_d = c1.number_input("Día Inicio", min_value=0, max_value=10000, value=min_d)
-end_d = c2.number_input("Día Término", min_value=0, max_value=10000, value=max_d)
+# Usamos una key dinámica para forzar el reinicio cuando cambia el archivo o el rango
+start_d = c1.number_input("Día Inicio", min_value=0, max_value=10000, value=min_d, key=f"start_val_{max_d}")
+end_d = c2.number_input("Día Término", min_value=0, max_value=10000, value=max_d, key=f"end_val_{max_d}")
 
 if start_d > end_d:
     st.sidebar.error("Inicio > Término")
