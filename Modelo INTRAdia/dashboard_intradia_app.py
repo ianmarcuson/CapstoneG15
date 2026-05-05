@@ -371,9 +371,8 @@ def render_dia_especifico(day):
     
     with t_sillas:
         fig = go.Figure()
-        ptypes = day_df["patient_type"].unique()
-        colors = px.colors.qualitative.Pastel
-        color_map = {pt: colors[i % len(colors)] for i, pt in enumerate(ptypes)}
+        # Expandimos la paleta de colores para tener mayor variedad
+        colors = px.colors.qualitative.Pastel + px.colors.qualitative.Set3 + px.colors.qualitative.Safe
         for _, r in day_df.iterrows():
             hover = (f"Paciente: {r['patient_id']} | Tipo: {r['patient_type']}<br>"
                      f"Ciclo/Ses: {r['cycle']}/{r['session']}<br>"
@@ -382,7 +381,11 @@ def render_dia_especifico(day):
                      f"Espera: {r['wait_after_pharmacy']} mod<br>"
                      f"Tratamiento: {r['treatment_start']} - {r['treatment_end']}<br>"
                      f"Extra: {r['extra_chair_modules']}")
-            fig.add_trace(go.Bar(x=[r["treatment_modules"]], y=[f"Silla {int(r['chair_id'])}"], base=[r["treatment_start"]], orientation="h", marker_color=color_map[r["patient_type"]], name=f"Tipo {r['patient_type']}", hoverinfo="text", hovertext=hover, text=f"Pat {r['patient_id']}", textposition="inside"))
+            
+            # Asignar color según el ID del paciente para evitar colores repetidos en bloques contiguos
+            pat_color = colors[int(r['patient_id']) % len(colors)]
+            
+            fig.add_trace(go.Bar(x=[r["treatment_modules"]], y=[f"Silla {int(r['chair_id'])}"], base=[r["treatment_start"]], orientation="h", marker_color=pat_color, marker_line=dict(color='white', width=1), name=f"Pat {r['patient_id']}", hoverinfo="text", hovertext=hover, text=f"Pat {r['patient_id']}", textposition="inside"))
         fig.add_vline(x=48, line_width=2, line_dash="dash", line_color="#f43f5e", annotation_text="Jornada Extra")
         fig.update_layout(barmode="stack", showlegend=False, xaxis=dict(title="Módulos", range=[0, 56], tick0=0, dtick=4, gridcolor="#f0f0f0"), yaxis=dict(type="category", categoryorder="array", categoryarray=[f"Silla {i}" for i in range(15, 0, -1)]), plot_bgcolor="rgba(0,0,0,0)", margin=dict(l=80, r=20, t=40, b=40))
         st.plotly_chart(fig, width='stretch')

@@ -377,9 +377,10 @@ def generate_html(dashboard_data, output_path="dashboard_intradia.html"):
         }
         
         // --- CHAIR CHART (X=Chairs, Y=Modules reversed) ---
-        const chairX = [], chairY = [], chairBase = [], chairTexts = [], chairHovers = [];
+        const chairX = [], chairY = [], chairBase = [], chairTexts = [], chairHovers = [], chairColors = [];
         // Max 15 chairs
         const chairCategories = Array.from({length: 15}, (_, i) => `Silla ${i+1}`);
+        const palette = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ec4899', '#14b8a6', '#f43f5e', '#6366f1', '#0ea5e9', '#d946ef', '#84cc16', '#a855f7'];
         
         allPatients.forEach(p => {
             chairX.push(`Silla ${p.chair_id}`);
@@ -387,11 +388,12 @@ def generate_html(dashboard_data, output_path="dashboard_intradia.html"):
             chairBase.push(p.abs_treat_start);
             chairTexts.push(`${p.id}`); // Solo el ID dentro de la barra
             chairHovers.push(`Día: ${p.day} | Paciente: ${p.id}<br>Módulos: ${p.treat_start} - ${p.treat_start+p.treat_len}`);
+            chairColors.push(palette[p.id % palette.length]);
         });
         
         const chairPlotData = [{
             x: chairX, y: chairY, base: chairBase, type: 'bar', orientation: 'v',
-            marker: { color: '#10b981', opacity: 0.9, line: {color: 'white', width: 1} }, 
+            marker: { color: chairColors, opacity: 0.9, line: {color: 'white', width: 1} }, 
             name: 'Tratamiento', text: chairTexts, hoverinfo: 'text', textposition: 'inside', hovertext: chairHovers, insidetextanchor: 'middle'
         }];
         
