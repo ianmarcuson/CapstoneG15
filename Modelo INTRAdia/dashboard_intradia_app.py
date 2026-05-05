@@ -81,11 +81,16 @@ def load_data(file_path):
         df_res = xls.parse("Resumen_Dias") if "Resumen_Dias" in xls.sheet_names else pd.DataFrame()
         df_prog = xls.parse("Programacion")
         df_ocup = xls.parse("Ocupacion_Modulos")
+        df_pend = xls.parse("Pendientes") if "Pendientes" in xls.sheet_names else pd.DataFrame()
+        # Calcular wait_after_pharmacy si no existe (compatibilidad)
         if 'wait_after_pharmacy' not in df_prog.columns:
             df_prog['wait_after_pharmacy'] = np.where(df_prog['pharmacy_modules'] > 0, df_prog['treatment_start'] - df_prog['pharmacy_end'] - 1, 0)
-        return df_res, df_prog, df_ocup
+        # delay_days: cuántos días de atraso acumuló la sesión al ser programada
+        if 'delay_days' not in df_prog.columns:
+            df_prog['delay_days'] = 0
+        return df_res, df_prog, df_ocup, df_pend
     except Exception as e:
-        return None, None, None
+        return None, None, None, pd.DataFrame()
 
 def assign_chairs_for_visualization(df_prog, n_chairs=15):
     assigned_rows = []
@@ -106,42 +111,70 @@ def assign_chairs_for_visualization(df_prog, n_chairs=15):
             assigned_rows.append(r_dict)
     return pd.DataFrame(assigned_rows)
 
-def compute_kpis(f_prog, f_ocup):
+def compute_kpis(f_prog, f_ocup, f_res=None, f_pend=None):
     total_sessions = len(f_prog)
     unique_patients = f_prog["patient_id"].nunique() if total_sessions > 0 else 0
     cumplimiento = (f_prog["treatment_end"] <= 47).sum() / total_sessions * 100 if total_sessions > 0 else 0
     total_extra = f_prog["extra_chair_modules"].sum() if total_sessions > 0 else 0
     days_extra = f_prog[f_prog["extra_chair_modules"] > 0]["day"].nunique() if total_sessions > 0 else 0
-    max_wait = f_prog["wait_after_pharmacy"].max() if total_sessions > 0 else 0
-    avg_wait = f_prog["wait_after_pharmacy"].mean() if total_sessions > 0 else 0
-    
+
+    # --- Espera real: desde llegada al centro (módulo 0) hasta inicio tratamiento ---
+    # treatment_start = módulos transcurridos desde que el paciente llega al centro ese día
+    max_wait = int(f_prog["treatment_start"].max()) if total_sessions > 0 else 0
+    avg_wait = round(float(f_prog["treatment_start"].mean()), 2) if total_sessions > 0 else 0
+
+    # --- Utilización sillas ---
     total_chairs_cap = f_ocup["chair_capacity"].sum() if not f_ocup.empty else 0
     util_chairs = (f_ocup["chairs_used"].sum() / total_chairs_cap * 100) if total_chairs_cap > 0 else 0
-    
     reg_ocup = f_ocup[f_ocup["is_extra"] == 0]
     util_chairs_reg = (reg_ocup["chairs_used"].sum() / reg_ocup["chair_capacity"].sum() * 100) if not reg_ocup.empty and reg_ocup["chair_capacity"].sum() > 0 else 0
-    
+
+    # --- Utilización enfermería ---
+    # nurse_events = número de eventos (inicios + términos) por módulo; cap = 4 por módulo
+    # Solo se cuentan módulos donde hay alguna actividad para el denominador real
     n_col = "nurse_events" if "nurse_events" in f_ocup.columns else "nurse_starts"
     if n_col == "nurse_starts" and "nurse_ends" in f_ocup.columns:
         nurse_used = f_ocup["nurse_starts"].sum() + f_ocup["nurse_ends"].sum()
     else:
         nurse_used = f_ocup[n_col].sum() if not f_ocup.empty else 0
     util_nurses = (nurse_used / f_ocup["nurse_capacity"].sum() * 100) if not f_ocup.empty and f_ocup["nurse_capacity"].sum() > 0 else 0
-    
-    util_pharm = (f_ocup["pharmacy_used"].sum() / f_ocup["pharmacy_capacity"].sum() * 100) if not f_ocup.empty and f_ocup["pharmacy_capacity"].sum() > 0 else 0
+
+    # --- Utilización farmacia: SOLO módulos 0-20 donde opera la farmacia ---
+    pharm_ops = f_ocup[f_ocup["module"] <= 20] if not f_ocup.empty else pd.DataFrame()
+    util_pharm = (pharm_ops["pharmacy_used"].sum() / pharm_ops["pharmacy_capacity"].sum() * 100) if not pharm_ops.empty and pharm_ops["pharmacy_capacity"].sum() > 0 else 0
+
     most_loaded_day = f_prog.groupby("day")["treatment_modules"].sum().idxmax() if total_sessions > 0 else None
-    
+
+    # --- Nuevos KPIs de atraso y cobertura ---
+    # Sesiones postponadas acumuladas (suma de sessions_postponed en Resumen_Dias)
+    if f_res is not None and not f_res.empty and "sessions_postponed" in f_res.columns:
+        postponed_sessions = int(f_res["sessions_postponed"].sum())
+    else:
+        postponed_sessions = 0
+
+    # Atraso promedio por paciente en días
+    avg_delay_days = round(float(f_prog["delay_days"].mean()), 2) if total_sessions > 0 and "delay_days" in f_prog.columns else 0.0
+
+    # Pacientes no atendidos al final del horizonte (en hoja Pendientes)
+    unattended = f_pend["patient_id"].nunique() if f_pend is not None and not f_pend.empty and "patient_id" in f_pend.columns else 0
+
     return {
         "sessions": total_sessions, "unique_patients": unique_patients, "cumplimiento": cumplimiento,
-        "total_extra": total_extra, "days_extra": days_extra, "max_wait": max_wait, "avg_wait": avg_wait,
-        "util_chairs": util_chairs, "util_chairs_reg": util_chairs_reg, "util_nurses": util_nurses, "util_pharm": util_pharm,
-        "most_loaded_day": most_loaded_day
+        "total_extra": total_extra, "days_extra": days_extra,
+        "max_wait": max_wait, "avg_wait": avg_wait,
+        "util_chairs": util_chairs, "util_chairs_reg": util_chairs_reg,
+        "util_nurses": util_nurses, "util_pharm": util_pharm,
+        "most_loaded_day": most_loaded_day,
+        "postponed_sessions": postponed_sessions,
+        "avg_delay_days": avg_delay_days,
+        "unattended": unattended,
     }
 
 def get_critical_days(df_prog, df_ocup):
     if df_prog.empty: return []
     extra_days = df_prog[df_prog["extra_chair_modules"] > 0]["day"].unique()
-    wait_days = df_prog[df_prog["wait_after_pharmacy"] > 6]["day"].unique()
+    # Usar treatment_start > 20 como proxy de días con espera larga desde llegada
+    wait_days = df_prog[df_prog["treatment_start"] > 20]["day"].unique()
     if df_ocup.empty: return list(set(extra_days) | set(wait_days))
     chairs_crit = df_ocup[df_ocup["chairs_used"] == df_ocup["chair_capacity"]]["day"].unique()
     n_col = "nurse_events" if "nurse_events" in df_ocup.columns else "nurse_starts"
@@ -175,7 +208,7 @@ if file_to_load is None:
     st.error("No se encontró el archivo de datos.")
     st.stop()
 
-df_res, df_prog_raw, df_ocup_raw = load_data(file_to_load)
+df_res, df_prog_raw, df_ocup_raw, df_pend_raw = load_data(file_to_load)
 if df_prog_raw is None or df_prog_raw.empty:
     st.error("Error leyendo 'Programacion'.")
     st.stop()
@@ -184,14 +217,14 @@ if "chair_id" not in df_prog_raw.columns:
     df_prog_raw = assign_chairs_for_visualization(df_prog_raw)
 
 # Load Base Heuristic
-df_res_base, df_prog_raw_base, df_ocup_raw_base = None, None, None
+df_res_base, df_prog_raw_base, df_ocup_raw_base, df_pend_raw_base = None, None, None, pd.DataFrame()
 possible_base_paths = [
     SCRIPT_DIR / "solution_heuristica_240.xlsx",
     SCRIPT_DIR / "solution_heuristica.xlsx",
 ]
 for p in possible_base_paths:
     if Path(p).exists():
-        df_res_base, df_prog_raw_base, df_ocup_raw_base = load_data(str(p))
+        df_res_base, df_prog_raw_base, df_ocup_raw_base, df_pend_raw_base = load_data(str(p))
         break
 
 if df_prog_raw_base is not None and not df_prog_raw_base.empty:
@@ -278,8 +311,8 @@ if (df_prog["treatment_end"] > 55).any():
 # ---------------------------------------------------------
 # 5. RENDERERS
 # ---------------------------------------------------------
-kpis = compute_kpis(df_prog, df_ocup)
-kpis_base = compute_kpis(df_prog_base, df_ocup_base) if df_prog_raw_base is not None and not df_prog_raw_base.empty else None
+kpis = compute_kpis(df_prog, df_ocup, df_res, df_pend_raw)
+kpis_base = compute_kpis(df_prog_base, df_ocup_base, df_res_base, df_pend_raw_base) if df_prog_raw_base is not None and not df_prog_raw_base.empty else None
 
 def render_resumen():
     st.markdown("<br>", unsafe_allow_html=True)
@@ -392,7 +425,8 @@ def render_kpis_view():
     _render_metric(c4, "4. Cumpl. Horario Reg.", "cumplimiento", is_percent=True)
     
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("##### 2. Tiempos de Espera (Farmacia → Silla)")
+    st.markdown("##### 2. Espera Real (Llegada al Centro → Inicio Tratamiento)")
+    st.caption("⚠️ Mide los módulos transcurridos desde que el paciente llega al centro (mód. 0) hasta que inicia su tratamiento en silla.")
     c5, c6, c7, c8 = st.columns(4)
     _render_metric(c5, "5. Espera Máxima", "max_wait", is_mod=True, inverse=True)
     _render_metric(c6, "6. Espera Promedio", "avg_wait", is_mod=True, inverse=True)
@@ -403,13 +437,21 @@ def render_kpis_view():
     _render_metric(c9, "7. Utilización Sillas (Total)", "util_chairs", is_percent=True)
     _render_metric(c10, "8. Util. Sillas (Solo Reg.)", "util_chairs_reg", is_percent=True)
     _render_metric(c11, "9. Ocupación Enfermería", "util_nurses", is_percent=True)
-    _render_metric(c12, "10. Ocupación Farmacia", "util_pharm", is_percent=True)
+    _render_metric(c12, "10. Ocupación Farmacia (Mód.0-20)", "util_pharm", is_percent=True)
     
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("##### 4. Saturación Extraordinaria")
     c13, c14, c15, c16 = st.columns(4)
     _render_metric(c13, "11. Módulos Extra Totales", "total_extra", inverse=True)
     _render_metric(c14, "12. Días con Extra", "days_extra", inverse=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("##### 5. Cobertura y Atrasos")
+    st.caption("⚠️ Indicadores que capturan el costo oculto de los modelos: sesiones que se postponen o quedan sin atender.")
+    c17, c18, c19, c20 = st.columns(4)
+    _render_metric(c17, "13. Sesiones Postponadas", "postponed_sessions", inverse=True)
+    _render_metric(c18, "14. Atraso Prom. por Paciente", "avg_delay_days", inverse=True)
+    _render_metric(c19, "15. Pacientes No Atendidos", "unattended", inverse=True)
 
 def render_dia_especifico(day):
     day_df = df_prog[df_prog["day"] == day]
