@@ -47,6 +47,54 @@ def default_arrivals_path(path=None):
         "DatosV2.xlsx"
     )
 
+def default_solution_path(path=None):
+    return resolve_existing_path(
+        path,
+        [
+            SCRIPT_DIR / "solution_interday.xlsx",
+            PROJECT_DIR / "solution_interday.xlsx",
+            Path.cwd() / "solution_interday.xlsx",
+        ],
+        "solution_interday.xlsx"
+    )
+
+# ---------------------------------------------------------------------------
+# ALTA: Cargar desde solution_interday.xlsx (misma fuente que modelo optimizado)
+# ---------------------------------------------------------------------------
+def load_interday_sessions(solution_path, base_data_path=None):
+    """Lee las asignaciones del modelo interdia y las convierte en sesiones
+    con t_min = día asignado por el modelo interdia. Garantiza comparabilidad
+    exacta con modelo_deldia_v2_adaptado."""
+    sol_path = default_solution_path(solution_path)
+    print(f"[INFO] Cargando sesiones desde solution interdia: {sol_path}")
+    assignments = pd.read_excel(sol_path, sheet_name="Asignaciones").copy()
+
+    # Normalizar nombre de columna patient_type
+    for col in ["patient_type", "patient_type_x", "patient_type_y"]:
+        if col in assignments.columns:
+            assignments["patient_type"] = assignments[col].astype(int)
+            break
+
+    for col in ["patient_id", "day", "cycle", "session", "modules"]:
+        assignments[col] = assignments[col].astype(int)
+
+    # Obtener pharmacy_modules desde Data G15
+    base_data = load_base_data(base_data_path)
+    patient_types = base_data["patient_types"]
+
+    def get_pharm(ptype):
+        return int(patient_types.get(int(ptype), {}).get("modulos_lab", 0))
+
+    assignments["pharmacy_modules"] = assignments["patient_type"].map(get_pharm)
+    assignments["t_min"] = assignments["day"]  # día asignado = día mínimo factible
+
+    print(
+        f"[INFO] Sesiones interdia cargadas: {len(assignments)} sesiones, "
+        f"{assignments['patient_id'].nunique()} pacientes, "
+        f"días [{assignments['day'].min()}..{assignments['day'].max()}]"
+    )
+    return assignments, base_data
+
 class ExecutionTimer:
     def __init__(self, name):
         self.name = name
@@ -219,14 +267,54 @@ class HeuristicDayScheduler:
             "delay_days": self.day - session["t_min"]
         })
 
-    def run_greedy(self):
-        # Sort criteria: Priority 1: delay (day - t_min) desc, Priority 2: patient_type, Priority 3: patient_id
+    def run_greedy(self, completed_sessions=None):
+        """Ejecuta la asignación greedy.
+        
+        MEDIA: completed_sessions es un set de tuplas (patient_id, cycle, session)
+        que ya fueron programadas en días anteriores. Se bloquea una sesión si
+        su predecesora en la secuencia clínica aún no ha sido completada.
+        """
+        if completed_sessions is None:
+            completed_sessions = set()
+
         self.sessions.sort(key=lambda x: (-(self.day - x["t_min"]), x["patient_type"], x["patient_id"]))
         
         for session in self.sessions:
+            pid = session["patient_id"]
+            c = session["cycle"]
+            s = session["session"]
+
+            # MEDIA: Verificar orden de sesión
+            # No programar (c,s) si (c,s-1) no está completada
+            if s > 1 and (pid, c, s - 1) not in completed_sessions:
+                self.unplaced.append(session)
+                continue
+            # No programar (c,1) si (c-1, ultima_sesion) no está completada
+            # Nota: necesitamos saber cuántas sesiones tiene el ciclo anterior
+            # Lo inferimos buscando la sesión máxima del ciclo c-1 para este paciente
+            if s == 1 and c > 1:
+                max_s_prev = max(
+                    (s2 for (p2, c2, s2) in completed_sessions if p2 == pid and c2 == c - 1),
+                    default=None
+                )
+                # Si no hay ninguna sesión completada del ciclo anterior, bloquear
+                if max_s_prev is None:
+                    self.unplaced.append(session)
+                    continue
+                # Verificar que la última sesión del ciclo anterior esté completa
+                # Buscamos la sesión máxima esperada para ese ciclo en la cola actual
+                expected_last_s = max(
+                    (sess["session"] for sess in self.sessions if sess["patient_id"] == pid and sess["cycle"] == c - 1),
+                    default=max_s_prev
+                )
+                if (pid, c - 1, expected_last_s) not in completed_sessions:
+                    self.unplaced.append(session)
+                    continue
+
             pharm_start, treat_start = self.find_first_feasible_block(session)
             if pharm_start is not None:
                 self.assign_session(session, pharm_start, treat_start)
+                completed_sessions.add((pid, c, s))
             else:
                 self.unplaced.append(session)
 
@@ -272,45 +360,58 @@ class HeuristicDayScheduler:
             })
         return self.schedule, occupancy, self.unplaced
 
-def run_heuristic(base_data_path, arrivals_path, max_days, output_path, enable_repack):
+def run_heuristic(base_data_path, arrivals_path, max_days, output_path, enable_repack, solution_path=None):
     timer = ExecutionTimer("Heurística Primera Silla Disponible")
-    
-    base_data = load_base_data(base_data_path)
-    capacity = base_data["capacity"]
-    
-    all_sessions_df = generate_sessions(arrivals_path, base_data["patient_types"], max_days)
-    print(f"[INFO] Total de sesiones generadas hasta el día {max_days}: {len(all_sessions_df)}")
-    
+
+    # ALTA: Usar solution_interday como fuente si se proporciona
+    if solution_path:
+        all_sessions_df, base_data = load_interday_sessions(solution_path, base_data_path)
+        capacity = base_data["capacity"]
+        # Con interdia, el horizonte lo fija el rango de días de la solución
+        first_day = int(all_sessions_df["t_min"].min())
+        last_day = int(all_sessions_df["t_min"].max()) + 1
+        print(f"[INFO] Modo interdia: resolviendo días {first_day} a {last_day - 1}")
+    else:
+        base_data = load_base_data(base_data_path)
+        capacity = base_data["capacity"]
+        all_sessions_df = generate_sessions(arrivals_path, base_data["patient_types"], max_days)
+        first_day = int(all_sessions_df["t_min"].min()) if not all_sessions_df.empty else 0
+        last_day = first_day + max_days
+        print(f"[INFO] Modo DatosV2: resolviendo días {first_day} a {last_day - 1}")
+
+    print(f"[INFO] Total de sesiones: {len(all_sessions_df)}")
+
     all_schedule = []
     all_occupancy = []
     summaries = []
-    
     pending_sessions = pd.DataFrame()
-    
-    first_day = int(all_sessions_df["t_min"].min()) if not all_sessions_df.empty else 0
-    last_day = first_day + max_days  # horizonte de max_days a partir del primer día
+    # MEDIA: set global de sesiones completadas para respetar orden clínico
+    completed_sessions = set()
 
     for day in range(first_day, last_day):
         print(f"\n[INFO] Resolviendo día {day}")
-        
+
         # Sesiones cuyo t_min es este día (llegadas nuevas)
         day_sessions = all_sessions_df[all_sessions_df["t_min"] == day]
         # Incorporar sesiones postergadas de días anteriores
         if not pending_sessions.empty:
             day_sessions = pd.concat([day_sessions, pending_sessions])
-            
+
         scheduler = HeuristicDayScheduler(day, day_sessions, capacity)
-        scheduler.run_greedy()
-        
+        scheduler.run_greedy(completed_sessions)
+        # Actualizar set global con las sesiones programadas hoy
+        for s in scheduler.schedule:
+            completed_sessions.add((s["patient_id"], s["cycle"], s["session"]))
+
         if not scheduler.validate_with_gurobi():
             print(f"[ERROR] Falló validación de Gurobi en el día {day}")
-            
+
         schedule, occupancy, unplaced = scheduler.get_results()
-        
+
         all_schedule.extend(schedule)
         all_occupancy.extend(occupancy)
         pending_sessions = pd.DataFrame(unplaced)
-        
+
         summaries.append({
             "day": day,
             "sessions_attempted": len(day_sessions),
@@ -319,6 +420,7 @@ def run_heuristic(base_data_path, arrivals_path, max_days, output_path, enable_r
             "total_extra_chair_modules": sum(s["extra_chair_modules"] for s in schedule),
             "max_chairs_used": max(o["chairs_used"] for o in occupancy) if occupancy else 0
         })
+
         
     print(f"\n[INFO] Simulacion finalizada. {len(pending_sessions)} sesiones pendientes al final del horizonte.")
     
@@ -340,9 +442,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--base-data", default=None)
     parser.add_argument("--arrivals", default=None)
-    parser.add_argument("--max-days", type=int, default=14)
+    parser.add_argument("--solution", default=None, help="Ruta a solution_interday.xlsx (modo comparable con modelo optimizado)")
+    parser.add_argument("--max-days", type=int, default=240, help="Horizonte (solo aplica en modo DatosV2, ignorado si --solution está activo)")
     parser.add_argument("--output", default="solution_heuristica.xlsx")
     parser.add_argument("--enable-gurobi-repack", action="store_true")
     args = parser.parse_args()
     
-    run_heuristic(args.base_data, args.arrivals, args.max_days, args.output, args.enable_gurobi_repack)
+    run_heuristic(args.base_data, args.arrivals, args.max_days, args.output, args.enable_gurobi_repack, solution_path=args.solution)
