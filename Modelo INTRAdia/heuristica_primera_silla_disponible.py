@@ -167,12 +167,18 @@ class HeuristicDayScheduler:
     def find_first_feasible_block(self, session):
         Dp = session["modules"]
         Fp = session["pharmacy_modules"]
+        M_ord = self.capacity["modules_ordinary"]  # módulo límite ordinario
+        M_total = len(self.M)                        # total incluyendo extra
         
-        for treat_start in range(0, len(self.M) - Dp + 1):
+        # Buscar primero en módulos ordinarios, luego en extra
+        # Esto replica la lógica del modelo optimizado con penalidad por módulos extra
+        for treat_start in range(0, M_total - Dp + 1):
             if Fp == 0:
                 if self.check_capacity(treat_start, Fp, treat_start, Dp):
                     return treat_start, treat_start
             else:
+                # pharm debe terminar ANTES de que empiece el tratamiento
+                # y la farmacia cierra en el módulo 20
                 for pharm_start in range(0, treat_start - Fp + 1):
                     # Restricción: la farmacia cierra en el módulo 20
                     if pharm_start + Fp - 1 <= 20:
@@ -193,6 +199,8 @@ class HeuristicDayScheduler:
         self.nurse_used[treat_start] += 1
         self.nurse_used[treat_end] += 1
         
+        pharm_end = pharm_start + Fp - 1 if Fp > 0 else None
+        wait_after_pharmacy = (treat_start - pharm_end - 1) if (Fp > 0 and pharm_end is not None) else 0
         self.schedule.append({
             "day": self.day,
             "patient_id": session["patient_id"],
@@ -200,11 +208,12 @@ class HeuristicDayScheduler:
             "cycle": session["cycle"],
             "session": session["session"],
             "pharmacy_start": pharm_start,
-            "pharmacy_end": pharm_start + Fp - 1 if Fp > 0 else None,
+            "pharmacy_end": pharm_end,
             "treatment_start": treat_start,
             "treatment_end": treat_end,
             "treatment_modules": Dp,
             "pharmacy_modules": Fp,
+            "wait_after_pharmacy": wait_after_pharmacy,
             "extra_chair_modules": sum(1 for m in range(treat_start, treat_end + 1) if m >= self.capacity["modules_ordinary"]),
             "due_day": session["t_min"],
             "delay_days": self.day - session["t_min"]
@@ -278,10 +287,15 @@ def run_heuristic(base_data_path, arrivals_path, max_days, output_path, enable_r
     
     pending_sessions = pd.DataFrame()
     
-    for day in range(1, max_days + 1):
+    first_day = int(all_sessions_df["t_min"].min()) if not all_sessions_df.empty else 0
+    last_day = first_day + max_days  # horizonte de max_days a partir del primer día
+
+    for day in range(first_day, last_day):
         print(f"\n[INFO] Resolviendo día {day}")
         
+        # Sesiones cuyo t_min es este día (llegadas nuevas)
         day_sessions = all_sessions_df[all_sessions_df["t_min"] == day]
+        # Incorporar sesiones postergadas de días anteriores
         if not pending_sessions.empty:
             day_sessions = pd.concat([day_sessions, pending_sessions])
             
@@ -309,7 +323,8 @@ def run_heuristic(base_data_path, arrivals_path, max_days, output_path, enable_r
     print(f"\n[INFO] Simulacion finalizada. {len(pending_sessions)} sesiones pendientes al final del horizonte.")
     
     if not pending_sessions.empty:
-        pending_sessions["delay_days"] = max_days - pending_sessions["t_min"]
+        # delay = cuántos días pasaron desde el t_min hasta el último día del horizonte
+        pending_sessions["delay_days"] = (last_day - 1) - pending_sessions["t_min"]
         
     with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
         pd.DataFrame(summaries).to_excel(writer, sheet_name="Resumen_Dias", index=False)
