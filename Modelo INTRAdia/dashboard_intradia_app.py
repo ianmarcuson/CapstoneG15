@@ -520,7 +520,7 @@ def render_dia_especifico(day):
                      f"Farmacia: {r['pharmacy_start']} - {r['pharmacy_end']}<br>"
                      f"Tratamiento: {r['treatment_start']} - {r['treatment_end']}")
             if r["pharmacy_modules"] > 0: pharm_x.append(r["pharmacy_modules"]); pharm_y.append(pid); pharm_base.append(r["pharmacy_start"]); pharm_h.append(h_str)
-            if r["wait_after_pharmacy"] > 0: wait_x.append(r["wait_after_pharmacy"]); wait_y.append(pid); wait_base.append(r["pharmacy_end"]); wait_h.append(h_str)
+            if r["wait_after_pharmacy"] > 0: wait_x.append(r["wait_after_pharmacy"]); wait_y.append(pid); wait_base.append(r["pharmacy_end"] + 1); wait_h.append(h_str)
             if r["treatment_modules"] > 0: treat_x.append(r["treatment_modules"]); treat_y.append(pid); treat_base.append(r["treatment_start"]); treat_h.append(h_str)
         if pharm_x: fig2.add_trace(go.Bar(x=pharm_x, y=pharm_y, base=pharm_base, orientation='h', name='Farmacia', marker_color="#38bdf8", hovertext=pharm_h, hoverinfo='text'))
         if wait_x: fig2.add_trace(go.Bar(x=wait_x, y=wait_y, base=wait_base, orientation='h', name='Espera', marker_color="#f43f5e", hovertext=wait_h, hoverinfo='text'))
