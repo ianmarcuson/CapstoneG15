@@ -6,7 +6,7 @@ El repositorio tambien incluye un **dashboard Streamlit** para revisar resultado
 
 Visualizacion oficial de los datos:
 
-https://capstoneg15.streamlit.app/
+https://capstoneg15-2.streamlit.app/
 
 ## Estructura del repositorio
 
@@ -41,7 +41,7 @@ CapstoneG15/
 
 La visualizacion oficial esta publicada en:
 
-https://capstoneg15.streamlit.app/
+https://capstoneg15-2.streamlit.app/
 
 Desde la raiz del repositorio:
 
