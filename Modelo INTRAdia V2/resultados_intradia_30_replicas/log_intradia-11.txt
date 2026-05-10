@@ -1,0 +1,224 @@
+Replica: 11
+Input solution: C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Modelo Interdia\resultados_30_replicas\solution_interday-11.xlsx
+Output XLSX: C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Modelo INTRAdia V2\resultados_intradia_30_replicas\solution_intradia-11.xlsx
+Comando: C:\Users\ianma\AppData\Local\Programs\Python\Python314\python.exe -X utf8 C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Modelo INTRAdia V2\modelo_intradia_optimizado.py --solution C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Modelo Interdia\resultados_30_replicas\solution_interday-11.xlsx --base-data C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Data Inicial\Data G15.xlsx --output C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Modelo INTRAdia V2\resultados_intradia_30_replicas\solution_intradia-11.xlsx --workers 2 --day 230 --day 231 --day 232 --day 233 --day 234 --day 235 --day 236 --day 237 --day 238 --day 239 --day 240 --day 241 --day 242 --day 243 --day 244 --day 245 --day 246 --day 247 --day 248 --day 249 --day 250
+
+--- INICIO MODELO INTRADIA ---
+
+[TIMER] Inicio modelo intradía optimizado
+[INFO] Cargando asignaciones interdía desde: C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Modelo Interdia\resultados_30_replicas\solution_interday-11.xlsx
+[INFO] Cargando parámetros base desde: C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Data Inicial\Data G15.xlsx
+[INFO] Asignaciones cargadas: filas=2119, pacientes=348, días=249, rango_días=[0..249]
+[INFO] Días a resolver: 20 | workers=2
+[INFO] Capacidades: S=15, E=4, Cf=9 (n_farmaceuticos), M=56, M_extra=8, nurse_mode=aggregate, weights=(extra=1.0, wait=0.0001, end=1e-06)
+[TIMER] datos cargados y validados: +0.48s | total 0.48s
+[INFO] Lanzando pool de 2 procesos...
+
+================================================================================
+[INFO] Resolviendo día 230 | sesiones=2 | módulos=50
+[TIMER] Inicio CG optimizado día 230
+
+================================================================================
+[INFO] Resolviendo día 233 | sesiones=5 | módulos=59
+[TIMER] Inicio CG optimizado día 233
+[TIMER] caché de patrones factibles: +0.03s | total 0.03s
+[TIMER] patrones iniciales: 2: +0.00s | total 0.03s
+Set parameter Username
+Set parameter LicenseID to value 2815222
+Academic license - for non-commercial use only - expires 2027-04-29
+[TIMER] modelo LP maestro construido: +0.01s | total 0.04s
+[CG] día=230 iter=1 lp_obj=0.000056 best_rc=0.00000000 neg=0 added=0 patterns=2
+[TIMER] MIP final obj=0.000056: +0.02s | total 0.05s
+[TIMER] Fin CG optimizado día 230: total 0.05s
+
+================================================================================
+[INFO] Resolviendo día 231 | sesiones=6 | módulos=79
+[TIMER] Inicio CG optimizado día 231
+[TIMER] caché de patrones factibles: +0.14s | total 0.14s
+[TIMER] patrones iniciales: 5: +0.00s | total 0.14s
+Set parameter Username
+Set parameter LicenseID to value 2815222
+Academic license - for non-commercial use only - expires 2027-04-29
+[TIMER] modelo LP maestro construido: +0.01s | total 0.15s
+[TIMER] caché de patrones factibles: +0.14s | total 0.14s
+[TIMER] patrones iniciales: 6: +0.00s | total 0.14s
+[TIMER] modelo LP maestro construido: +0.00s | total 0.14s
+[CG] día=233 iter=1 lp_obj=0.000071 best_rc=0.00000000 neg=0 added=0 patterns=5
+[TIMER] MIP final obj=0.000071: +0.06s | total 0.20s
+[TIMER] Fin CG optimizado día 233: total 0.20s
+
+================================================================================
+[INFO] Resolviendo día 234 | sesiones=3 | módulos=48
+[TIMER] Inicio CG optimizado día 234
+[CG] día=231 iter=1 lp_obj=0.000102 best_rc=-0.00000100 neg=1 added=1 patterns=7
+[TIMER] caché de patrones factibles: +0.06s | total 0.06s
+[TIMER] patrones iniciales: 3: +0.00s | total 0.07s
+[TIMER] modelo LP maestro construido: +0.00s | total 0.07s
+[CG] día=234 iter=1 lp_obj=0.000055 best_rc=0.00000000 neg=0 added=0 patterns=3
+[TIMER] MIP final obj=0.000055: +0.03s | total 0.10s
+[TIMER] Fin CG optimizado día 234: total 0.10s
+[CG] día=231 iter=2 lp_obj=0.000102 best_rc=0.00000000 neg=0 added=0 patterns=7
+[TIMER] MIP final obj=0.000102: +0.13s | total 0.27s
+[TIMER] Fin CG optimizado día 231: total 0.27s
+
+================================================================================
+[INFO] Resolviendo día 235 | sesiones=3 | módulos=43
+[TIMER] Inicio CG optimizado día 235
+
+================================================================================
+[INFO] Resolviendo día 232 | sesiones=1 | módulos=15
+[TIMER] Inicio CG optimizado día 232
+[TIMER] caché de patrones factibles: +0.02s | total 0.02s
+[TIMER] patrones iniciales: 1: +0.00s | total 0.02s
+[TIMER] modelo LP maestro construido: +0.00s | total 0.02s
+[CG] día=232 iter=1 lp_obj=0.000017 best_rc=0.00000000 neg=0 added=0 patterns=1
+[TIMER] MIP final obj=0.000017: +0.01s | total 0.04s
+[TIMER] Fin CG optimizado día 232: total 0.04s
+
+================================================================================
+[INFO] Resolviendo día 236 | sesiones=2 | módulos=29
+[TIMER] Inicio CG optimizado día 236
+[TIMER] caché de patrones factibles: +0.07s | total 0.07s
+[TIMER] patrones iniciales: 3: +0.00s | total 0.07s
+[TIMER] modelo LP maestro construido: +0.00s | total 0.07s
+[TIMER] caché de patrones factibles: +0.05s | total 0.05s
+[TIMER] patrones iniciales: 2: +0.00s | total 0.05s
+[TIMER] modelo LP maestro construido: +0.00s | total 0.05s
+[CG] día=235 iter=1 lp_obj=0.000053 best_rc=0.00000000 neg=0 added=0 patterns=3
+[TIMER] MIP final obj=0.000053: +0.04s | total 0.11s
+[TIMER] Fin CG optimizado día 235: total 0.11s
+
+================================================================================
+[INFO] Resolviendo día 239 | sesiones=4 | módulos=78
+[TIMER] Inicio CG optimizado día 239
+[CG] día=236 iter=1 lp_obj=0.000035 best_rc=0.00000000 neg=0 added=0 patterns=2
+[TIMER] MIP final obj=0.000035: +0.02s | total 0.07s
+[TIMER] Fin CG optimizado día 236: total 0.07s
+
+================================================================================
+[INFO] Resolviendo día 237 | sesiones=2 | módulos=23
+[TIMER] Inicio CG optimizado día 237
+[TIMER] caché de patrones factibles: +0.05s | total 0.05s
+[TIMER] patrones iniciales: 2: +0.00s | total 0.05s
+[TIMER] modelo LP maestro construido: +0.00s | total 0.05s
+[TIMER] caché de patrones factibles: +0.07s | total 0.07s
+[TIMER] patrones iniciales: 4: +0.00s | total 0.07s
+[TIMER] modelo LP maestro construido: +0.00s | total 0.07s
+[CG] día=237 iter=1 lp_obj=0.000029 best_rc=0.00000000 neg=0 added=0 patterns=2
+[TIMER] MIP final obj=0.000029: +0.02s | total 0.07s
+[TIMER] Fin CG optimizado día 237: total 0.07s
+
+================================================================================
+[INFO] Resolviendo día 238 | sesiones=1 | módulos=14
+[TIMER] Inicio CG optimizado día 238
+[TIMER] caché de patrones factibles: +0.02s | total 0.02s
+[TIMER] patrones iniciales: 1: +0.00s | total 0.02s
+[CG] día=239 iter=1 lp_obj=0.000092 best_rc=0.00000000 neg=0 added=0 patterns=4
+[TIMER] modelo LP maestro construido: +0.00s | total 0.02s
+[TIMER] MIP final obj=0.000092: +0.03s | total 0.10s
+[TIMER] Fin CG optimizado día 239: total 0.10s
+
+================================================================================
+[INFO] Resolviendo día 240 | sesiones=2 | módulos=28
+[TIMER] Inicio CG optimizado día 240
+[CG] día=238 iter=1 lp_obj=0.000018 best_rc=0.00000000 neg=0 added=0 patterns=1
+[TIMER] MIP final obj=0.000018: +0.01s | total 0.03s
+[TIMER] Fin CG optimizado día 238: total 0.03s
+
+================================================================================
+[INFO] Resolviendo día 242 | sesiones=4 | módulos=62
+[TIMER] Inicio CG optimizado día 242
+[TIMER] caché de patrones factibles: +0.04s | total 0.04s
+[TIMER] patrones iniciales: 2: +0.00s | total 0.04s
+[TIMER] modelo LP maestro construido: +0.00s | total 0.04s
+[CG] día=240 iter=1 lp_obj=0.000036 best_rc=0.00000000 neg=0 added=0 patterns=2
+[TIMER] MIP final obj=0.000036: +0.02s | total 0.07s
+[TIMER] Fin CG optimizado día 240: total 0.07s
+
+================================================================================
+[INFO] Resolviendo día 241 | sesiones=3 | módulos=56
+[TIMER] Inicio CG optimizado día 241
+[TIMER] caché de patrones factibles: +0.09s | total 0.09s
+[TIMER] patrones iniciales: 4: +0.00s | total 0.09s
+[TIMER] modelo LP maestro construido: +0.00s | total 0.10s
+[TIMER] caché de patrones factibles: +0.06s | total 0.06s
+[TIMER] patrones iniciales: 3: +0.00s | total 0.06s
+[TIMER] modelo LP maestro construido: +0.00s | total 0.07s
+[CG] día=242 iter=1 lp_obj=0.000073 best_rc=0.00000000 neg=0 added=0 patterns=4
+[TIMER] MIP final obj=0.000073: +0.04s | total 0.14s
+[TIMER] Fin CG optimizado día 242: total 0.14s
+
+================================================================================
+[INFO] Resolviendo día 243 | sesiones=4 | módulos=58
+[TIMER] Inicio CG optimizado día 243
+[CG] día=241 iter=1 lp_obj=0.000064 best_rc=0.00000000 neg=0 added=0 patterns=3
+[TIMER] MIP final obj=0.000064: +0.03s | total 0.10s
+[TIMER] Fin CG optimizado día 241: total 0.10s
+
+================================================================================
+[INFO] Resolviendo día 245 | sesiones=2 | módulos=40
+[TIMER] Inicio CG optimizado día 245
+[TIMER] caché de patrones factibles: +0.04s | total 0.04s
+[TIMER] patrones iniciales: 2: +0.00s | total 0.05s
+[TIMER] modelo LP maestro construido: +0.00s | total 0.05s
+[CG] día=245 iter=1 lp_obj=0.000045 best_rc=0.00000000 neg=0 added=0 patterns=2
+[TIMER] MIP final obj=0.000045: +0.02s | total 0.07s
+[TIMER] Fin CG optimizado día 245: total 0.07s
+
+================================================================================
+[INFO] Resolviendo día 246 | sesiones=2 | módulos=28
+[TIMER] Inicio CG optimizado día 246
+[TIMER] caché de patrones factibles: +0.10s | total 0.10s
+[TIMER] patrones iniciales: 4: +0.00s | total 0.10s
+[TIMER] modelo LP maestro construido: +0.00s | total 0.11s
+[TIMER] caché de patrones factibles: +0.05s | total 0.05s
+[TIMER] patrones iniciales: 2: +0.00s | total 0.05s
+[TIMER] modelo LP maestro construido: +0.00s | total 0.05s
+[CG] día=243 iter=1 lp_obj=0.000072 best_rc=0.00000000 neg=0 added=0 patterns=4
+[TIMER] MIP final obj=0.000072: +0.04s | total 0.15s
+[TIMER] Fin CG optimizado día 243: total 0.15s
+
+================================================================================
+[INFO] Resolviendo día 244 | sesiones=2 | módulos=29
+[TIMER] Inicio CG optimizado día 244
+[CG] día=246 iter=1 lp_obj=0.000036 best_rc=0.00000000 neg=0 added=0 patterns=2
+[TIMER] MIP final obj=0.000036: +0.02s | total 0.08s
+[TIMER] Fin CG optimizado día 246: total 0.08s
+
+================================================================================
+[INFO] Resolviendo día 247 | sesiones=2 | módulos=20
+[TIMER] Inicio CG optimizado día 247
+[TIMER] caché de patrones factibles: +0.05s | total 0.05s
+[TIMER] patrones iniciales: 2: +0.00s | total 0.05s
+[TIMER] modelo LP maestro construido: +0.00s | total 0.05s
+[TIMER] caché de patrones factibles: +0.05s | total 0.05s
+[TIMER] patrones iniciales: 2: +0.00s | total 0.05s
+[CG] día=244 iter=1 lp_obj=0.000035 best_rc=0.00000000 neg=0 added=0 patterns=2
+[TIMER] modelo LP maestro construido: +0.00s | total 0.06s
+[TIMER] MIP final obj=0.000035: +0.02s | total 0.08s
+[TIMER] Fin CG optimizado día 244: total 0.08s
+
+================================================================================
+[INFO] Resolviendo día 248 | sesiones=1 | módulos=8
+[TIMER] Inicio CG optimizado día 248
+[CG] día=247 iter=1 lp_obj=0.000024 best_rc=0.00000000 neg=0 added=0 patterns=2
+[TIMER] MIP final obj=0.000024: +0.03s | total 0.09s
+[TIMER] Fin CG optimizado día 247: total 0.09s
+[TIMER] caché de patrones factibles: +0.03s | total 0.03s
+[TIMER] patrones iniciales: 1: +0.00s | total 0.03s
+[TIMER] modelo LP maestro construido: +0.00s | total 0.03s
+[CG] día=248 iter=1 lp_obj=0.000010 best_rc=0.00000000 neg=0 added=0 patterns=1
+[TIMER] MIP final obj=0.000010: +0.01s | total 0.05s
+[TIMER] Fin CG optimizado día 248: total 0.05s
+
+================================================================================
+[INFO] Resolviendo día 249 | sesiones=1 | módulos=25
+[TIMER] Inicio CG optimizado día 249
+[TIMER] caché de patrones factibles: +0.01s | total 0.01s
+[TIMER] patrones iniciales: 1: +0.00s | total 0.01s
+[TIMER] modelo LP maestro construido: +0.00s | total 0.02s
+[CG] día=249 iter=1 lp_obj=0.000028 best_rc=0.00000000 neg=0 added=0 patterns=1
+[TIMER] MIP final obj=0.000028: +0.01s | total 0.02s
+[TIMER] Fin CG optimizado día 249: total 0.02s
+[TIMER] resultados guardados en C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Modelo INTRAdia V2\resultados_intradia_30_replicas\solution_intradia-11.xlsx: +2.35s | total 2.83s
+[TIMER] Fin modelo intradía optimizado: total 2.83s

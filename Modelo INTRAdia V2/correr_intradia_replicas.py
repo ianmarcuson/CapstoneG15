@@ -88,9 +88,12 @@ def run_intradia_for_replica(
     pricing_top_n: Optional[int],
     gurobi_output: bool,
     overwrite: bool,
+    start_day: Optional[int] = None,
+    end_day: Optional[int] = None,
 ) -> IntradiaRunResult:
     input_solution = interdia_dir / f"solution_interday-{replica}.xlsx"
     output_xlsx = out_dir / f"solution_intradia-{replica}.xlsx"
+    log_file = out_dir / f"log_intradia-{replica}.txt"
 
     if not input_solution.exists():
         raise FileNotFoundError(f"No existe input interdía para réplica {replica}: {input_solution}")
@@ -100,7 +103,7 @@ def run_intradia_for_replica(
             replica=replica,
             input_solution=str(input_solution),
             output_xlsx=str(output_xlsx),
-            log_file="",
+            log_file=str(log_file),
             returncode=0,
             status="SKIPPED_EXISTS",
             elapsed_seconds=0.0,
@@ -123,6 +126,9 @@ def run_intradia_for_replica(
 
     if all_days:
         cmd.append("--all-days")
+    elif start_day is not None and end_day is not None:
+        for d in range(start_day, end_day + 1):
+            cmd.extend(["--day", str(d)])
     elif max_days is not None:
         cmd.extend(["--max-days", str(max_days)])
 
@@ -151,32 +157,42 @@ def run_intradia_for_replica(
     )
 
     last_heartbeat = t0
-    # Leer el output en tiempo real
-    while True:
-        line = process.stdout.readline()
-        if not line and process.poll() is not None:
-            break
-        
-        if line:
-            clean_line = line.strip()
-            # Filtrar solo líneas de interés para el usuario
-            if "[TIMER] Inicio CG optimizado día" in clean_line:
-                day_num = clean_line.split("día")[-1].strip()
-                _safe_print(f"    [Replica {replica}] >>> Resolviendo Día {day_num}...")
-            elif "[TIMER] Fin CG optimizado día" in clean_line:
-                # El modelo ya calcula el tiempo total del día, lo mostramos
-                _safe_print(f"    [Replica {replica}] {clean_line}")
+    # Leer el output en tiempo real y guardarlo en el log
+    with open(log_file, "w", encoding="utf-8", errors="replace") as f_log:
+        f_log.write(f"Replica: {replica}\n")
+        f_log.write(f"Input solution: {input_solution}\n")
+        f_log.write(f"Output XLSX: {output_xlsx}\n")
+        f_log.write(f"Comando: {' '.join(cmd)}\n")
+        f_log.write("\n--- INICIO MODELO INTRADIA ---\n\n")
+        f_log.flush()
+
+        while True:
+            line = process.stdout.readline()
+            if not line and process.poll() is not None:
+                break
             
-            # Reset heartbeat timer since we got activity
-            last_heartbeat = time.time()
-        else:
-            # Si no hay líneas, verificamos el heartbeat cada segundo
-            time.sleep(1)
-            now = time.time()
-            if now - last_heartbeat >= 30:
-                elapsed = int(now - t0)
-                _safe_print(f"    ... [Replica {replica}] sigue trabajando ({elapsed}s)")
-                last_heartbeat = now
+            if line:
+                f_log.write(line)
+                f_log.flush()
+                clean_line = line.strip()
+                # Filtrar solo líneas de interés para el usuario
+                if "[TIMER] Inicio CG optimizado día" in clean_line:
+                    day_num = clean_line.split("día")[-1].strip()
+                    _safe_print(f"    [Replica {replica}] >>> Resolviendo Día {day_num}...")
+                elif "[TIMER] Fin CG optimizado día" in clean_line:
+                    # El modelo ya calcula el tiempo total del día, lo mostramos
+                    _safe_print(f"    [Replica {replica}] {clean_line}")
+                
+                # Reset heartbeat timer since we got activity
+                last_heartbeat = time.time()
+            else:
+                # Si no hay líneas, verificamos el heartbeat cada segundo
+                time.sleep(1)
+                now = time.time()
+                if now - last_heartbeat >= 30:
+                    elapsed = int(now - t0)
+                    _safe_print(f"    ... [Replica {replica}] sigue trabajando ({elapsed}s)")
+                    last_heartbeat = now
 
     retcode = process.wait()
     elapsed = round(time.time() - t0, 2)
@@ -186,7 +202,7 @@ def run_intradia_for_replica(
         replica=replica,
         input_solution=str(input_solution),
         output_xlsx=str(output_xlsx),
-        log_file="",
+        log_file=str(log_file),
         returncode=retcode,
         status=status,
         elapsed_seconds=elapsed,
@@ -245,8 +261,10 @@ def parse_args() -> argparse.Namespace:
         help="Cantidad de replicas intradia en paralelo. Recomendado: 1, porque cada replica ya usa workers internos.",
     )
     parser.add_argument("--all-days", action="store_true", default=True, help="Resolver todos los dias con sesiones. Default: True.")
-    parser.add_argument("--no-all-days", dest="all_days", action="store_false", help="No usar --all-days; usa --max-days.")
+    parser.add_argument("--no-all-days", dest="all_days", action="store_false", help="No usar --all-days; usa --max-days o --start-day/--end-day.")
     parser.add_argument("--max-days", type=int, default=None, help="Cantidad de dias si no se usa --all-days.")
+    parser.add_argument("--start-day", type=int, default=None, help="Día de inicio para procesar un rango de días.")
+    parser.add_argument("--end-day", type=int, default=None, help="Día de fin para procesar un rango de días.")
     parser.add_argument("--max-iterations", type=int, default=None, help="Opcional: sobrescribe max iterations del CG.")
     parser.add_argument("--pricing-top-n", type=int, default=None, help="Opcional: columnas negativas maximas por paciente/iteracion.")
     parser.add_argument("--gurobi-output", action="store_true", help="Muestra output interno de Gurobi en logs.")
@@ -318,6 +336,8 @@ def main() -> None:
                     pricing_top_n=args.pricing_top_n,
                     gurobi_output=args.gurobi_output,
                     overwrite=args.overwrite,
+                    start_day=args.start_day,
+                    end_day=args.end_day,
                 )
             )
 
@@ -340,10 +360,11 @@ def main() -> None:
     _safe_print(f"Resultados en: {out_dir}")
     _safe_print("Outputs esperados:")
     _safe_print("  solution_intradia-i.xlsx")
+    _safe_print("  log_intradia-i.txt")
     _safe_print("=" * 76)
 
     if any(r.status == "ERROR" for r in results):
-        _safe_print("\nAlgunas replicas fallaron.")
+        _safe_print("\nAlgunas replicas fallaron. Revisa los log_intradia-i.txt correspondientes.")
         sys.exit(1)
 
 

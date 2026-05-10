@@ -1,0 +1,532 @@
+Replica: 2
+Input solution: C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Modelo Interdia\resultados_30_replicas\solution_interday-2.xlsx
+Output XLSX: C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Modelo INTRAdia V2\resultados_intradia_30_replicas\solution_intradia-2.xlsx
+Comando: C:\Users\ianma\AppData\Local\Programs\Python\Python314\python.exe -X utf8 C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Modelo INTRAdia V2\modelo_intradia_optimizado.py --solution C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Modelo Interdia\resultados_30_replicas\solution_interday-2.xlsx --base-data C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Data Inicial\Data G15.xlsx --output C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Modelo INTRAdia V2\resultados_intradia_30_replicas\solution_intradia-2.xlsx --workers 2 --day 230 --day 231 --day 232 --day 233 --day 234 --day 235 --day 236 --day 237 --day 238 --day 239 --day 240 --day 241 --day 242 --day 243 --day 244 --day 245 --day 246 --day 247 --day 248 --day 249 --day 250
+
+--- INICIO MODELO INTRADIA ---
+
+[TIMER] Inicio modelo intradía optimizado
+[INFO] Cargando asignaciones interdía desde: C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Modelo Interdia\resultados_30_replicas\solution_interday-2.xlsx
+[INFO] Cargando parámetros base desde: C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Data Inicial\Data G15.xlsx
+[INFO] Asignaciones cargadas: filas=12216, pacientes=1009, días=475, rango_días=[0..474]
+[INFO] Días a resolver: 21 | workers=2
+[INFO] Capacidades: S=15, E=4, Cf=9 (n_farmaceuticos), M=56, M_extra=8, nurse_mode=aggregate, weights=(extra=1.0, wait=0.0001, end=1e-06)
+[TIMER] datos cargados y validados: +1.74s | total 1.74s
+[INFO] Lanzando pool de 2 procesos...
+
+================================================================================
+[INFO] Resolviendo día 230 | sesiones=33 | módulos=532
+[TIMER] Inicio CG optimizado día 230
+
+================================================================================
+[INFO] Resolviendo día 233 | sesiones=30 | módulos=459
+[TIMER] Inicio CG optimizado día 233
+[TIMER] caché de patrones factibles: +0.98s | total 0.98s
+[TIMER] caché de patrones factibles: +1.04s | total 1.04s
+[TIMER] patrones iniciales: 30: +0.10s | total 1.07s
+Set parameter Username
+Set parameter LicenseID to value 2815222
+Academic license - for non-commercial use only - expires 2027-04-29
+[TIMER] modelo LP maestro construido: +0.02s | total 1.09s
+[TIMER] patrones iniciales: 33: +0.10s | total 1.14s
+Set parameter Username
+Set parameter LicenseID to value 2815222
+Academic license - for non-commercial use only - expires 2027-04-29
+[TIMER] modelo LP maestro construido: +0.02s | total 1.16s
+[CG] día=233 iter=1 lp_obj=0.007570 best_rc=-0.00142700 neg=65 added=65 patterns=95
+[CG] día=230 iter=1 lp_obj=4.013131 best_rc=-2.00203000 neg=73 added=73 patterns=106
+[CG] día=233 iter=2 lp_obj=0.007570 best_rc=-0.00142500 neg=78 added=78 patterns=173
+[CG] día=230 iter=2 lp_obj=4.013131 best_rc=-2.00202800 neg=85 added=85 patterns=191
+[CG] día=233 iter=3 lp_obj=0.007565 best_rc=-0.00142200 neg=90 added=90 patterns=263
+[CG] día=230 iter=3 lp_obj=4.013131 best_rc=-2.00202000 neg=99 added=99 patterns=290
+[CG] día=233 iter=4 lp_obj=0.004725 best_rc=-0.00264100 neg=90 added=90 patterns=353
+[CG] día=233 iter=5 lp_obj=0.003001 best_rc=-0.00091400 neg=84 added=84 patterns=437
+[CG] día=230 iter=4 lp_obj=4.013131 best_rc=-2.00181000 neg=99 added=99 patterns=389
+[CG] día=233 iter=6 lp_obj=0.002701 best_rc=-0.00070700 neg=78 added=78 patterns=515
+[CG] día=233 iter=7 lp_obj=0.002497 best_rc=-0.00070850 neg=78 added=78 patterns=593
+[CG] día=230 iter=5 lp_obj=4.010902 best_rc=-2.00182200 neg=99 added=99 patterns=488
+[CG] día=233 iter=8 lp_obj=0.001696 best_rc=-0.00024300 neg=69 added=69 patterns=662
+[CG] día=233 iter=9 lp_obj=0.001192 best_rc=-0.00000250 neg=23 added=23 patterns=685
+[CG] día=230 iter=6 lp_obj=4.010902 best_rc=-2.00181900 neg=96 added=96 patterns=584
+[CG] día=233 iter=10 lp_obj=0.001187 best_rc=0.00000000 neg=0 added=0 patterns=685
+[TIMER] MIP final obj=0.001189: +5.96s | total 7.05s
+[TIMER] Fin CG optimizado día 233: total 7.05s
+
+================================================================================
+[INFO] Resolviendo día 234 | sesiones=39 | módulos=616
+[TIMER] Inicio CG optimizado día 234
+[CG] día=230 iter=7 lp_obj=4.010605 best_rc=-2.00180700 neg=96 added=96 patterns=680
+[CG] día=230 iter=8 lp_obj=4.008484 best_rc=-2.00085875 neg=96 added=96 patterns=776
+[TIMER] caché de patrones factibles: +1.53s | total 1.53s
+[TIMER] patrones iniciales: 39: +0.22s | total 1.74s
+[TIMER] modelo LP maestro construido: +0.02s | total 1.77s
+[CG] día=230 iter=9 lp_obj=2.007883 best_rc=-1.00025175 neg=83 added=83 patterns=859
+[CG] día=230 iter=10 lp_obj=1.007281 best_rc=-0.00020200 neg=80 added=80 patterns=939
+[CG] día=234 iter=1 lp_obj=24.031976 best_rc=-4.00293900 neg=92 added=92 patterns=131
+[CG] día=230 iter=11 lp_obj=1.007075 best_rc=-0.00006633 neg=74 added=74 patterns=1013
+[CG] día=230 iter=12 lp_obj=1.007075 best_rc=0.00000000 neg=0 added=0 patterns=1013
+[TIMER] MIP final obj=1.007075: +9.31s | total 10.47s
+[TIMER] Fin CG optimizado día 230: total 10.47s
+
+================================================================================
+[INFO] Resolviendo día 231 | sesiones=41 | módulos=691
+[TIMER] Inicio CG optimizado día 231
+[CG] día=234 iter=2 lp_obj=24.031976 best_rc=-4.00293700 neg=103 added=103 patterns=234
+[TIMER] caché de patrones factibles: +1.09s | total 1.09s
+[TIMER] patrones iniciales: 41: +0.22s | total 1.31s
+[TIMER] modelo LP maestro construido: +0.02s | total 1.33s
+[CG] día=234 iter=3 lp_obj=24.031974 best_rc=-4.00293400 neg=117 added=117 patterns=351
+[CG] día=231 iter=1 lp_obj=4000043.029057 best_rc=-999999.99998300 neg=101 added=101 patterns=142
+[CG] día=234 iter=4 lp_obj=24.031974 best_rc=-8.00641900 neg=117 added=117 patterns=468
+[CG] día=231 iter=2 lp_obj=4000043.029057 best_rc=-999999.99998200 neg=113 added=113 patterns=255
+[CG] día=234 iter=5 lp_obj=17.025809 best_rc=-7.00445800 neg=117 added=117 patterns=585
+[CG] día=231 iter=3 lp_obj=4000043.029051 best_rc=-999999.99997600 neg=123 added=123 patterns=378
+[CG] día=234 iter=6 lp_obj=12.018538 best_rc=-4.00111100 neg=112 added=112 patterns=697
+[CG] día=234 iter=7 lp_obj=12.018187 best_rc=-4.00131000 neg=104 added=104 patterns=801
+[CG] día=231 iter=4 lp_obj=4000043.029051 best_rc=-999999.99895900 neg=123 added=123 patterns=501
+[CG] día=234 iter=8 lp_obj=12.017833 best_rc=-4.00080950 neg=102 added=102 patterns=903
+[CG] día=234 iter=9 lp_obj=8.018627 best_rc=-2.99873800 neg=115 added=115 patterns=1018
+[CG] día=231 iter=5 lp_obj=4000041.026217 best_rc=-999999.99986700 neg=122 added=122 patterns=623
+[CG] día=234 iter=10 lp_obj=5.017722 best_rc=-1.00090200 neg=105 added=105 patterns=1123
+[CG] día=234 iter=11 lp_obj=5.017068 best_rc=-0.00081200 neg=101 added=101 patterns=1224
+[CG] día=231 iter=6 lp_obj=4000041.026218 best_rc=-1000004.00007000 neg=120 added=120 patterns=743
+[CG] día=234 iter=12 lp_obj=5.016722 best_rc=-0.00040500 neg=91 added=91 patterns=1315
+[CG] día=231 iter=7 lp_obj=4000041.023375 best_rc=-1999994.99751300 neg=120 added=120 patterns=863
+[CG] día=234 iter=13 lp_obj=5.016483 best_rc=-0.00010200 neg=91 added=91 patterns=1406
+[CG] día=234 iter=14 lp_obj=5.016415 best_rc=-0.00019600 neg=73 added=73 patterns=1479
+[CG] día=234 iter=15 lp_obj=5.016019 best_rc=0.00000000 neg=0 added=0 patterns=1479
+[CG] día=231 iter=8 lp_obj=1000041.031330 best_rc=-999990.99805250 neg=123 added=123 patterns=986
+[TIMER] MIP final obj=5.016119: +11.94s | total 13.71s
+[TIMER] Fin CG optimizado día 234: total 13.71s
+
+================================================================================
+[INFO] Resolviendo día 235 | sesiones=35 | módulos=520
+[TIMER] Inicio CG optimizado día 235
+[CG] día=231 iter=9 lp_obj=54.113135 best_rc=-6.28246048 neg=123 added=123 patterns=1109
+[TIMER] caché de patrones factibles: +0.90s | total 0.90s
+[TIMER] patrones iniciales: 35: +0.13s | total 1.03s
+[TIMER] modelo LP maestro construido: +0.01s | total 1.04s
+[CG] día=231 iter=10 lp_obj=46.531501 best_rc=-3.50034050 neg=123 added=123 patterns=1232
+[CG] día=235 iter=1 lp_obj=1.019132 best_rc=-1.00233600 neg=81 added=81 patterns=116
+[CG] día=231 iter=11 lp_obj=45.758668 best_rc=-2.45466518 neg=123 added=123 patterns=1355
+[CG] día=235 iter=2 lp_obj=1.019132 best_rc=-1.00233400 neg=96 added=96 patterns=212
+[CG] día=231 iter=12 lp_obj=43.832660 best_rc=-2.00021300 neg=123 added=123 patterns=1478
+[CG] día=235 iter=3 lp_obj=1.019132 best_rc=-1.00233200 neg=105 added=105 patterns=317
+[CG] día=231 iter=13 lp_obj=42.916685 best_rc=-0.73034335 neg=123 added=123 patterns=1601
+[CG] día=235 iter=4 lp_obj=1.018289 best_rc=-2.00542733 neg=105 added=105 patterns=422
+[CG] día=231 iter=14 lp_obj=42.530266 best_rc=-0.50126200 neg=111 added=111 patterns=1712
+[CG] día=235 iter=5 lp_obj=0.010383 best_rc=-0.00141600 neg=105 added=105 patterns=527
+[CG] día=231 iter=15 lp_obj=42.530266 best_rc=-1.00023333 neg=105 added=105 patterns=1817
+[CG] día=235 iter=6 lp_obj=0.009402 best_rc=-0.00065850 neg=90 added=90 patterns=617
+[CG] día=231 iter=16 lp_obj=42.031012 best_rc=-0.33563633 neg=123 added=123 patterns=1940
+[CG] día=235 iter=7 lp_obj=0.007278 best_rc=-0.00030900 neg=90 added=90 patterns=707
+[CG] día=231 iter=17 lp_obj=42.029719 best_rc=-0.33183933 neg=104 added=104 patterns=2044
+[CG] día=235 iter=8 lp_obj=0.007110 best_rc=-0.00016967 neg=80 added=80 patterns=787
+[CG] día=231 iter=18 lp_obj=42.027137 best_rc=-0.99914700 neg=121 added=121 patterns=2165
+[CG] día=235 iter=9 lp_obj=0.006978 best_rc=-0.00019600 neg=63 added=63 patterns=850
+[CG] día=231 iter=19 lp_obj=42.027137 best_rc=-0.00040000 neg=99 added=99 patterns=2264
+[CG] día=235 iter=10 lp_obj=0.006978 best_rc=-0.00016600 neg=75 added=75 patterns=925
+[CG] día=231 iter=20 lp_obj=42.026412 best_rc=-0.00010000 neg=48 added=48 patterns=2312
+[CG] día=235 iter=11 lp_obj=0.006925 best_rc=-0.00000100 neg=55 added=55 patterns=980
+[CG] día=231 iter=21 lp_obj=42.026412 best_rc=0.00000000 neg=0 added=0 patterns=2312
+[CG] día=235 iter=12 lp_obj=0.006924 best_rc=0.00000000 neg=0 added=0 patterns=980
+[TIMER] MIP final obj=42.026412: +19.27s | total 20.60s
+[TIMER] Fin CG optimizado día 231: total 20.60s
+
+================================================================================
+[INFO] Resolviendo día 232 | sesiones=31 | módulos=511
+[TIMER] Inicio CG optimizado día 232
+[TIMER] MIP final obj=0.006971: +9.46s | total 10.50s
+[TIMER] Fin CG optimizado día 235: total 10.50s
+
+================================================================================
+[INFO] Resolviendo día 236 | sesiones=37 | módulos=614
+[TIMER] Inicio CG optimizado día 236
+[TIMER] caché de patrones factibles: +1.00s | total 1.00s
+[TIMER] patrones iniciales: 31: +0.09s | total 1.09s
+[TIMER] modelo LP maestro construido: +0.01s | total 1.10s
+[TIMER] caché de patrones factibles: +1.19s | total 1.19s
+[TIMER] patrones iniciales: 37: +0.19s | total 1.39s
+[TIMER] modelo LP maestro construido: +0.02s | total 1.40s
+[CG] día=232 iter=1 lp_obj=0.011793 best_rc=-0.00213400 neg=69 added=69 patterns=100
+[CG] día=232 iter=2 lp_obj=0.011793 best_rc=-0.00213300 neg=83 added=83 patterns=183
+[CG] día=236 iter=1 lp_obj=36.026612 best_rc=-8.00283700 neg=87 added=87 patterns=124
+[CG] día=232 iter=3 lp_obj=0.011792 best_rc=-0.00213200 neg=93 added=93 patterns=276
+[CG] día=236 iter=2 lp_obj=36.026612 best_rc=-8.00283500 neg=99 added=99 patterns=223
+[CG] día=232 iter=4 lp_obj=0.009504 best_rc=-0.00441700 neg=93 added=93 patterns=369
+[CG] día=232 iter=5 lp_obj=0.007633 best_rc=-0.00121500 neg=87 added=87 patterns=456
+[CG] día=236 iter=3 lp_obj=36.026610 best_rc=-8.00283000 neg=111 added=111 patterns=334
+[CG] día=232 iter=6 lp_obj=0.007633 best_rc=-0.00111200 neg=87 added=87 patterns=543
+[CG] día=232 iter=7 lp_obj=0.003592 best_rc=-0.00040700 neg=84 added=84 patterns=627
+[CG] día=232 iter=8 lp_obj=0.003322 best_rc=-0.00020059 neg=69 added=69 patterns=696
+[CG] día=236 iter=4 lp_obj=36.026610 best_rc=-8.00282700 neg=111 added=111 patterns=445
+[CG] día=232 iter=9 lp_obj=0.003181 best_rc=-0.00000050 neg=13 added=13 patterns=709
+[CG] día=232 iter=10 lp_obj=0.003181 best_rc=0.00000000 neg=0 added=0 patterns=709
+[TIMER] MIP final obj=0.003181: +5.75s | total 6.85s
+[TIMER] Fin CG optimizado día 232: total 6.85s
+
+================================================================================
+[INFO] Resolviendo día 239 | sesiones=37 | módulos=586
+[TIMER] Inicio CG optimizado día 239
+[CG] día=236 iter=5 lp_obj=36.026610 best_rc=-8.00282400 neg=110 added=110 patterns=555
+[TIMER] caché de patrones factibles: +2.07s | total 2.07s
+[TIMER] patrones iniciales: 37: +0.19s | total 2.27s
+[TIMER] modelo LP maestro construido: +0.03s | total 2.29s
+[CG] día=236 iter=6 lp_obj=36.025394 best_rc=-8.00232100 neg=111 added=111 patterns=666
+[CG] día=239 iter=1 lp_obj=15.025062 best_rc=-4.00253300 neg=85 added=85 patterns=122
+[CG] día=236 iter=7 lp_obj=36.022661 best_rc=-8.00288800 neg=111 added=111 patterns=777
+[CG] día=239 iter=2 lp_obj=15.025062 best_rc=-4.00253100 neg=100 added=100 patterns=222
+[CG] día=236 iter=8 lp_obj=36.022361 best_rc=-8.00237350 neg=111 added=111 patterns=888
+[CG] día=236 iter=9 lp_obj=10.519737 best_rc=-3.00020700 neg=111 added=111 patterns=999
+[CG] día=239 iter=3 lp_obj=15.025060 best_rc=-4.00252700 neg=111 added=111 patterns=333
+[CG] día=236 iter=10 lp_obj=7.017010 best_rc=-0.00069200 neg=111 added=111 patterns=1110
+[CG] día=236 iter=11 lp_obj=7.016364 best_rc=-0.00027300 neg=81 added=81 patterns=1191
+[CG] día=236 iter=12 lp_obj=7.015901 best_rc=-0.00000400 neg=9 added=9 patterns=1200
+[CG] día=239 iter=4 lp_obj=14.523643 best_rc=-4.00231500 neg=111 added=111 patterns=444
+[CG] día=236 iter=13 lp_obj=7.015901 best_rc=0.00000000 neg=0 added=0 patterns=1200
+[TIMER] MIP final obj=7.016004: +19.87s | total 21.28s
+[TIMER] Fin CG optimizado día 236: total 21.28s
+
+================================================================================
+[INFO] Resolviendo día 237 | sesiones=25 | módulos=387
+[TIMER] Inicio CG optimizado día 237
+[CG] día=239 iter=5 lp_obj=14.019295 best_rc=-4.00252400 neg=108 added=108 patterns=552
+[TIMER] caché de patrones factibles: +1.46s | total 1.46s
+[TIMER] patrones iniciales: 25: +0.07s | total 1.53s
+[TIMER] modelo LP maestro construido: +0.02s | total 1.55s
+[CG] día=237 iter=1 lp_obj=0.001761 best_rc=-0.00041900 neg=49 added=49 patterns=74
+[CG] día=237 iter=2 lp_obj=0.001761 best_rc=-0.00041700 neg=62 added=62 patterns=136
+[CG] día=239 iter=6 lp_obj=14.019295 best_rc=-4.00191500 neg=105 added=105 patterns=657
+[CG] día=237 iter=3 lp_obj=0.001757 best_rc=-0.00041500 neg=75 added=75 patterns=211
+[CG] día=237 iter=4 lp_obj=0.001344 best_rc=-0.00030900 neg=72 added=72 patterns=283
+[CG] día=237 iter=5 lp_obj=0.001344 best_rc=-0.00030600 neg=66 added=66 patterns=349
+[CG] día=239 iter=7 lp_obj=14.018895 best_rc=-4.00252300 neg=105 added=105 patterns=762
+[CG] día=237 iter=6 lp_obj=0.000873 best_rc=-0.00020300 neg=63 added=63 patterns=412
+[CG] día=237 iter=7 lp_obj=0.000627 best_rc=-0.00000100 neg=21 added=21 patterns=433
+[CG] día=237 iter=8 lp_obj=0.000626 best_rc=0.00000000 neg=0 added=0 patterns=433
+[TIMER] MIP final obj=0.000626: +5.47s | total 7.03s
+[TIMER] Fin CG optimizado día 237: total 7.03s
+
+================================================================================
+[INFO] Resolviendo día 238 | sesiones=34 | módulos=539
+[TIMER] Inicio CG optimizado día 238
+[CG] día=239 iter=8 lp_obj=6.017385 best_rc=-2.33387167 neg=105 added=105 patterns=867
+[CG] día=239 iter=9 lp_obj=4.016122 best_rc=-2.99999800 neg=99 added=99 patterns=966
+[TIMER] caché de patrones factibles: +2.01s | total 2.01s
+[TIMER] patrones iniciales: 34: +0.33s | total 2.34s
+[TIMER] modelo LP maestro construido: +0.03s | total 2.37s
+[CG] día=238 iter=1 lp_obj=0.018301 best_rc=-0.00243400 neg=78 added=78 patterns=112
+[CG] día=239 iter=10 lp_obj=2.018016 best_rc=-0.99686040 neg=102 added=102 patterns=1068
+[CG] día=238 iter=2 lp_obj=0.018301 best_rc=-0.00243200 neg=89 added=89 patterns=201
+[CG] día=239 iter=11 lp_obj=2.015810 best_rc=-0.00020300 neg=88 added=88 patterns=1156
+[CG] día=239 iter=12 lp_obj=2.015154 best_rc=-0.00020000 neg=73 added=73 patterns=1229
+[CG] día=238 iter=3 lp_obj=0.018300 best_rc=-0.00242900 neg=102 added=102 patterns=303
+[CG] día=239 iter=13 lp_obj=2.014953 best_rc=0.00000000 neg=0 added=0 patterns=1229
+[TIMER] MIP final obj=2.014953: +26.19s | total 28.48s
+[TIMER] Fin CG optimizado día 239: total 28.48s
+
+================================================================================
+[INFO] Resolviendo día 240 | sesiones=33 | módulos=525
+[TIMER] Inicio CG optimizado día 240
+[TIMER] caché de patrones factibles: +1.53s | total 1.53s
+[TIMER] patrones iniciales: 33: +0.15s | total 1.68s
+[TIMER] modelo LP maestro construido: +0.03s | total 1.71s
+[CG] día=238 iter=4 lp_obj=0.017086 best_rc=-0.00373700 neg=102 added=102 patterns=405
+[CG] día=240 iter=1 lp_obj=0.015566 best_rc=-0.00213400 neg=75 added=75 patterns=108
+[CG] día=238 iter=5 lp_obj=0.009547 best_rc=-0.00116300 neg=90 added=90 patterns=495
+[CG] día=240 iter=2 lp_obj=0.015566 best_rc=-0.00213300 neg=89 added=89 patterns=197
+[CG] día=238 iter=6 lp_obj=0.009547 best_rc=-0.00106100 neg=90 added=90 patterns=585
+[CG] día=238 iter=7 lp_obj=0.006181 best_rc=-0.00032360 neg=78 added=78 patterns=663
+[CG] día=240 iter=3 lp_obj=0.015558 best_rc=-0.00212900 neg=99 added=99 patterns=296
+[CG] día=238 iter=8 lp_obj=0.005967 best_rc=-0.00020000 neg=85 added=85 patterns=748
+[CG] día=238 iter=9 lp_obj=0.005966 best_rc=-0.00000100 neg=3 added=3 patterns=751
+[CG] día=240 iter=4 lp_obj=0.012366 best_rc=-0.00425600 neg=99 added=99 patterns=395
+[CG] día=238 iter=10 lp_obj=0.005966 best_rc=0.00000000 neg=0 added=0 patterns=751
+[TIMER] MIP final obj=0.005966: +13.18s | total 15.55s
+[TIMER] Fin CG optimizado día 238: total 15.55s
+
+================================================================================
+[INFO] Resolviendo día 242 | sesiones=38 | módulos=599
+[TIMER] Inicio CG optimizado día 242
+[CG] día=240 iter=5 lp_obj=0.008671 best_rc=-0.00151550 neg=99 added=99 patterns=494
+[CG] día=240 iter=6 lp_obj=0.008671 best_rc=-0.00131300 neg=93 added=93 patterns=587
+[TIMER] caché de patrones factibles: +1.44s | total 1.44s
+[TIMER] patrones iniciales: 38: +0.20s | total 1.64s
+[TIMER] modelo LP maestro construido: +0.02s | total 1.66s
+[CG] día=240 iter=7 lp_obj=0.007861 best_rc=-0.00111000 neg=90 added=90 patterns=677
+[CG] día=240 iter=8 lp_obj=0.005443 best_rc=-0.00027946 neg=88 added=88 patterns=765
+[CG] día=242 iter=1 lp_obj=23.026102 best_rc=-5.00253400 neg=88 added=88 patterns=126
+[CG] día=240 iter=9 lp_obj=0.005034 best_rc=-0.00013467 neg=72 added=72 patterns=837
+[CG] día=240 iter=10 lp_obj=0.004932 best_rc=-0.00000100 neg=30 added=30 patterns=867
+[CG] día=240 iter=11 lp_obj=0.004931 best_rc=0.00000000 neg=0 added=0 patterns=867
+[CG] día=242 iter=2 lp_obj=23.026102 best_rc=-5.00253200 neg=102 added=102 patterns=228
+[TIMER] MIP final obj=0.004931: +11.13s | total 12.84s
+[TIMER] Fin CG optimizado día 240: total 12.84s
+
+================================================================================
+[INFO] Resolviendo día 241 | sesiones=39 | módulos=617
+[TIMER] Inicio CG optimizado día 241
+[TIMER] caché de patrones factibles: +1.50s | total 1.50s
+[CG] día=242 iter=3 lp_obj=23.026098 best_rc=-5.00252800 neg=114 added=114 patterns=342
+[TIMER] patrones iniciales: 39: +0.20s | total 1.70s
+[TIMER] modelo LP maestro construido: +0.02s | total 1.73s
+[CG] día=241 iter=1 lp_obj=26.029945 best_rc=-7.00293600 neg=90 added=90 patterns=129
+[CG] día=242 iter=4 lp_obj=23.026098 best_rc=-6.00424000 neg=114 added=114 patterns=456
+[CG] día=241 iter=2 lp_obj=26.029945 best_rc=-7.00293300 neg=102 added=102 patterns=231
+[CG] día=242 iter=5 lp_obj=22.022354 best_rc=-5.00242200 neg=114 added=114 patterns=570
+[CG] día=242 iter=6 lp_obj=22.020038 best_rc=-5.00121400 neg=108 added=108 patterns=678
+[CG] día=241 iter=3 lp_obj=26.029944 best_rc=-7.00293000 neg=117 added=117 patterns=348
+[CG] día=242 iter=7 lp_obj=12.018513 best_rc=-5.00090750 neg=110 added=110 patterns=788
+[CG] día=241 iter=4 lp_obj=26.029944 best_rc=-8.00666750 neg=117 added=117 patterns=465
+[CG] día=242 iter=8 lp_obj=12.017919 best_rc=-5.00121300 neg=108 added=108 patterns=896
+[CG] día=242 iter=9 lp_obj=8.016701 best_rc=-1.00060500 neg=108 added=108 patterns=1004
+[CG] día=241 iter=5 lp_obj=26.029642 best_rc=-7.00545000 neg=117 added=117 patterns=582
+[CG] día=242 iter=10 lp_obj=7.016803 best_rc=-1.00000900 neg=103 added=103 patterns=1107
+[CG] día=241 iter=6 lp_obj=19.024493 best_rc=-7.00141100 neg=113 added=113 patterns=695
+[CG] día=242 iter=11 lp_obj=7.016751 best_rc=-0.00036400 neg=100 added=100 patterns=1207
+[CG] día=242 iter=12 lp_obj=7.016403 best_rc=-0.00009200 neg=83 added=83 patterns=1290
+[CG] día=241 iter=7 lp_obj=19.024293 best_rc=-7.50111650 neg=111 added=111 patterns=806
+[CG] día=242 iter=13 lp_obj=7.016397 best_rc=-0.00010000 neg=57 added=57 patterns=1347
+[CG] día=242 iter=14 lp_obj=7.016397 best_rc=0.00000000 neg=0 added=0 patterns=1347
+[TIMER] MIP final obj=7.016697: +14.27s | total 15.93s
+[TIMER] Fin CG optimizado día 242: total 15.93s
+
+================================================================================
+[INFO] Resolviendo día 243 | sesiones=29 | módulos=466
+[TIMER] Inicio CG optimizado día 243
+[CG] día=241 iter=8 lp_obj=18.356387 best_rc=-6.00050500 neg=108 added=108 patterns=914
+[TIMER] caché de patrones factibles: +1.06s | total 1.06s
+[TIMER] patrones iniciales: 29: +0.09s | total 1.14s
+[TIMER] modelo LP maestro construido: +0.02s | total 1.16s
+[CG] día=241 iter=9 lp_obj=13.020770 best_rc=-1.00000000 neg=104 added=104 patterns=1018
+[CG] día=243 iter=1 lp_obj=0.005857 best_rc=-0.00122600 neg=61 added=61 patterns=90
+[CG] día=241 iter=10 lp_obj=13.019831 best_rc=-0.00073340 neg=103 added=103 patterns=1121
+[CG] día=243 iter=2 lp_obj=0.005857 best_rc=-0.00122400 neg=76 added=76 patterns=166
+[CG] día=241 iter=11 lp_obj=13.019363 best_rc=-0.00020200 neg=87 added=87 patterns=1208
+[CG] día=243 iter=3 lp_obj=0.005855 best_rc=-0.00122233 neg=87 added=87 patterns=253
+[CG] día=241 iter=12 lp_obj=13.019161 best_rc=-0.00020000 neg=81 added=81 patterns=1289
+[CG] día=243 iter=4 lp_obj=0.004635 best_rc=-0.00081100 neg=84 added=84 patterns=337
+[CG] día=241 iter=13 lp_obj=13.019159 best_rc=-0.00000100 neg=2 added=2 patterns=1291
+[CG] día=243 iter=5 lp_obj=0.004635 best_rc=-0.00080800 neg=82 added=82 patterns=419
+[CG] día=241 iter=14 lp_obj=13.019159 best_rc=0.00000000 neg=0 added=0 patterns=1291
+[TIMER] MIP final obj=13.019159: +14.90s | total 16.62s
+[TIMER] Fin CG optimizado día 241: total 16.62s
+
+================================================================================
+[INFO] Resolviendo día 245 | sesiones=35 | módulos=582
+[TIMER] Inicio CG optimizado día 245
+[CG] día=243 iter=6 lp_obj=0.003723 best_rc=-0.00150600 neg=84 added=84 patterns=503
+[CG] día=243 iter=7 lp_obj=0.002630 best_rc=-0.00080900 neg=79 added=79 patterns=582
+[TIMER] caché de patrones factibles: +1.24s | total 1.24s
+[TIMER] patrones iniciales: 35: +0.15s | total 1.39s
+[TIMER] modelo LP maestro construido: +0.01s | total 1.41s
+[CG] día=243 iter=8 lp_obj=0.002050 best_rc=-0.00009900 neg=80 added=80 patterns=662
+[CG] día=243 iter=9 lp_obj=0.001874 best_rc=-0.00000100 neg=19 added=19 patterns=681
+[CG] día=245 iter=1 lp_obj=21.020490 best_rc=-8.00293700 neg=81 added=81 patterns=116
+[CG] día=243 iter=10 lp_obj=0.001874 best_rc=0.00000000 neg=0 added=0 patterns=681
+[TIMER] MIP final obj=0.001905: +5.93s | total 7.09s
+[TIMER] Fin CG optimizado día 243: total 7.09s
+
+================================================================================
+[INFO] Resolviendo día 244 | sesiones=36 | módulos=574
+[TIMER] Inicio CG optimizado día 244
+[CG] día=245 iter=2 lp_obj=21.020490 best_rc=-8.00293500 neg=93 added=93 patterns=209
+[TIMER] caché de patrones factibles: +1.13s | total 1.13s
+[TIMER] patrones iniciales: 36: +0.12s | total 1.25s
+[TIMER] modelo LP maestro construido: +0.02s | total 1.27s
+[CG] día=245 iter=3 lp_obj=21.020485 best_rc=-8.00293100 neg=105 added=105 patterns=314
+[CG] día=244 iter=1 lp_obj=12.020077 best_rc=-3.00233200 neg=81 added=81 patterns=117
+[CG] día=244 iter=2 lp_obj=12.020077 best_rc=-3.00232900 neg=93 added=93 patterns=210
+[CG] día=245 iter=4 lp_obj=21.020485 best_rc=-8.00292700 neg=105 added=105 patterns=419
+[CG] día=244 iter=3 lp_obj=12.020077 best_rc=-3.00232600 neg=108 added=108 patterns=318
+[CG] día=245 iter=5 lp_obj=21.020485 best_rc=-7.00150700 neg=105 added=105 patterns=524
+[CG] día=244 iter=4 lp_obj=12.020077 best_rc=-3.00221400 neg=108 added=108 patterns=426
+[CG] día=245 iter=6 lp_obj=21.019275 best_rc=-9.00251500 neg=105 added=105 patterns=629
+[CG] día=244 iter=5 lp_obj=12.017649 best_rc=-3.00232250 neg=105 added=105 patterns=531
+[CG] día=245 iter=7 lp_obj=14.017606 best_rc=-14.00140500 neg=105 added=105 patterns=734
+[CG] día=244 iter=6 lp_obj=12.017649 best_rc=-3.00231900 neg=105 added=105 patterns=636
+[CG] día=245 iter=8 lp_obj=13.016092 best_rc=-3.00095250 neg=105 added=105 patterns=839
+[CG] día=244 iter=7 lp_obj=12.015228 best_rc=-3.00171800 neg=105 added=105 patterns=741
+[CG] día=245 iter=9 lp_obj=8.013115 best_rc=-0.00069700 neg=104 added=104 patterns=943
+[CG] día=245 iter=10 lp_obj=8.012409 best_rc=-0.00025100 neg=98 added=98 patterns=1041
+[CG] día=244 iter=8 lp_obj=12.014980 best_rc=-3.00105450 neg=105 added=105 patterns=846
+[CG] día=245 iter=11 lp_obj=8.012309 best_rc=-0.00030000 neg=93 added=93 patterns=1134
+[CG] día=245 iter=12 lp_obj=8.012259 best_rc=-0.00015000 neg=96 added=96 patterns=1230
+[CG] día=244 iter=9 lp_obj=4.013433 best_rc=-3.00047400 neg=106 added=106 patterns=952
+[CG] día=245 iter=13 lp_obj=8.012209 best_rc=-0.00000600 neg=47 added=47 patterns=1277
+[CG] día=244 iter=10 lp_obj=4.012818 best_rc=-0.00050500 neg=99 added=99 patterns=1051
+[CG] día=245 iter=14 lp_obj=8.012208 best_rc=0.00000000 neg=0 added=0 patterns=1277
+[TIMER] MIP final obj=8.012615: +12.83s | total 14.23s
+[TIMER] Fin CG optimizado día 245: total 14.23s
+
+================================================================================
+[INFO] Resolviendo día 246 | sesiones=35 | módulos=586
+[TIMER] Inicio CG optimizado día 246
+[CG] día=244 iter=11 lp_obj=4.012813 best_rc=-0.00030300 neg=94 added=94 patterns=1145
+[CG] día=244 iter=12 lp_obj=4.012813 best_rc=-0.00020200 neg=93 added=93 patterns=1238
+[TIMER] caché de patrones factibles: +1.27s | total 1.27s
+[TIMER] patrones iniciales: 35: +0.17s | total 1.45s
+[CG] día=244 iter=13 lp_obj=4.012708 best_rc=-0.00010300 neg=87 added=87 patterns=1325
+[TIMER] modelo LP maestro construido: +0.02s | total 1.46s
+[CG] día=244 iter=14 lp_obj=4.012708 best_rc=-0.00000200 neg=66 added=66 patterns=1391
+[CG] día=246 iter=1 lp_obj=14.025052 best_rc=-4.00223300 neg=83 added=83 patterns=118
+[CG] día=244 iter=15 lp_obj=4.012708 best_rc=-0.00000200 neg=51 added=51 patterns=1442
+[CG] día=244 iter=16 lp_obj=4.012708 best_rc=0.00000000 neg=0 added=0 patterns=1442
+[TIMER] MIP final obj=4.012908: +13.88s | total 15.15s
+[TIMER] Fin CG optimizado día 244: total 15.15s
+
+================================================================================
+[INFO] Resolviendo día 248 | sesiones=44 | módulos=677
+[TIMER] Inicio CG optimizado día 248
+[CG] día=246 iter=2 lp_obj=14.025052 best_rc=-4.00223100 neg=96 added=96 patterns=214
+[TIMER] caché de patrones factibles: +1.60s | total 1.60s
+[CG] día=246 iter=3 lp_obj=14.025050 best_rc=-4.00222600 neg=105 added=105 patterns=319
+[TIMER] patrones iniciales: 44: +0.26s | total 1.86s
+[TIMER] modelo LP maestro construido: +0.02s | total 1.88s
+[CG] día=246 iter=4 lp_obj=14.025050 best_rc=-5.00394100 neg=105 added=105 patterns=424
+[CG] día=248 iter=1 lp_obj=3000051.040600 best_rc=-999999.99998200 neg=108 added=108 patterns=152
+[CG] día=246 iter=5 lp_obj=10.018161 best_rc=-4.00221800 neg=105 added=105 patterns=529
+[CG] día=248 iter=2 lp_obj=3000051.040600 best_rc=-999999.99998000 neg=119 added=119 patterns=271
+[CG] día=246 iter=6 lp_obj=7.015936 best_rc=-4.00262500 neg=102 added=102 patterns=631
+[CG] día=246 iter=7 lp_obj=1.012806 best_rc=-1.33324433 neg=99 added=99 patterns=730
+[CG] día=246 iter=8 lp_obj=0.009979 best_rc=-0.00069680 neg=81 added=81 patterns=811
+[CG] día=248 iter=3 lp_obj=3000051.040596 best_rc=-999999.99997700 neg=132 added=132 patterns=403
+[CG] día=246 iter=9 lp_obj=0.009065 best_rc=-0.00020200 neg=87 added=87 patterns=898
+[CG] día=246 iter=10 lp_obj=0.008870 best_rc=-0.00010050 neg=63 added=63 patterns=961
+[CG] día=246 iter=11 lp_obj=0.008765 best_rc=-0.00009800 neg=40 added=40 patterns=1001
+[CG] día=248 iter=4 lp_obj=3000051.040596 best_rc=-1000004.00239350 neg=132 added=132 patterns=535
+[CG] día=246 iter=12 lp_obj=0.008663 best_rc=-0.00000700 neg=35 added=35 patterns=1036
+[CG] día=246 iter=13 lp_obj=0.008661 best_rc=-0.00000100 neg=30 added=30 patterns=1066
+[CG] día=246 iter=14 lp_obj=0.008661 best_rc=0.00000000 neg=0 added=0 patterns=1066
+[TIMER] MIP final obj=0.008661: +10.97s | total 12.43s
+[TIMER] Fin CG optimizado día 246: total 12.43s
+
+================================================================================
+[INFO] Resolviendo día 247 | sesiones=39 | módulos=604
+[TIMER] Inicio CG optimizado día 247
+[CG] día=248 iter=5 lp_obj=3000041.035338 best_rc=-1000000.00078700 neg=132 added=132 patterns=667
+[TIMER] caché de patrones factibles: +1.31s | total 1.31s
+[TIMER] patrones iniciales: 39: +0.22s | total 1.52s
+[TIMER] modelo LP maestro construido: +0.02s | total 1.54s
+[CG] día=248 iter=6 lp_obj=1000041.912945 best_rc=-999997.31017044 neg=132 added=132 patterns=799
+[CG] día=247 iter=1 lp_obj=25.030759 best_rc=-5.00263400 neg=93 added=93 patterns=132
+[CG] día=248 iter=7 lp_obj=50.322222 best_rc=-14.14780421 neg=132 added=132 patterns=931
+[CG] día=247 iter=2 lp_obj=25.030759 best_rc=-5.00263200 neg=105 added=105 patterns=237
+[CG] día=248 iter=8 lp_obj=39.740320 best_rc=-4.95298752 neg=132 added=132 patterns=1063
+[CG] día=247 iter=3 lp_obj=25.030755 best_rc=-5.00263000 neg=117 added=117 patterns=354
+[CG] día=248 iter=9 lp_obj=33.105566 best_rc=-2.32081483 neg=132 added=132 patterns=1195
+[CG] día=248 iter=10 lp_obj=31.035801 best_rc=-1.49916211 neg=129 added=129 patterns=1324
+[CG] día=247 iter=4 lp_obj=25.030755 best_rc=-7.00262100 neg=117 added=117 patterns=471
+[CG] día=248 iter=11 lp_obj=28.300204 best_rc=-0.93450267 neg=132 added=132 patterns=1456
+[CG] día=247 iter=5 lp_obj=25.030755 best_rc=-8.00557100 neg=117 added=117 patterns=588
+[CG] día=248 iter=12 lp_obj=28.030459 best_rc=-1.00080120 neg=132 added=132 patterns=1588
+[CG] día=247 iter=6 lp_obj=16.021821 best_rc=-5.00047483 neg=108 added=108 patterns=696
+[CG] día=248 iter=13 lp_obj=28.030459 best_rc=-1.00020520 neg=132 added=132 patterns=1720
+[CG] día=247 iter=7 lp_obj=4.019215 best_rc=-3.00042683 neg=111 added=111 patterns=807
+[CG] día=248 iter=14 lp_obj=28.030383 best_rc=-0.99801256 neg=132 added=132 patterns=1852
+[CG] día=247 iter=8 lp_obj=2.018774 best_rc=-1.00080000 neg=108 added=108 patterns=915
+[CG] día=248 iter=15 lp_obj=28.027282 best_rc=-0.00114189 neg=132 added=132 patterns=1984
+[CG] día=248 iter=16 lp_obj=28.026900 best_rc=-0.99573567 neg=124 added=124 patterns=2108
+[CG] día=247 iter=9 lp_obj=0.017952 best_rc=-0.00072191 neg=108 added=108 patterns=1023
+[CG] día=247 iter=10 lp_obj=0.017557 best_rc=-0.00045880 neg=99 added=99 patterns=1122
+[CG] día=248 iter=17 lp_obj=28.026431 best_rc=-0.00009109 neg=90 added=90 patterns=2198
+[CG] día=247 iter=11 lp_obj=0.017222 best_rc=-0.00018586 neg=78 added=78 patterns=1200
+[CG] día=248 iter=18 lp_obj=28.026330 best_rc=-0.00060417 neg=129 added=129 patterns=2327
+[CG] día=247 iter=12 lp_obj=0.017092 best_rc=-0.00032763 neg=87 added=87 patterns=1287
+[CG] día=248 iter=19 lp_obj=28.026331 best_rc=-0.00000087 neg=97 added=97 patterns=2424
+[CG] día=247 iter=13 lp_obj=0.016914 best_rc=-0.00009400 neg=81 added=81 patterns=1368
+[CG] día=248 iter=20 lp_obj=28.026331 best_rc=-0.00000083 neg=78 added=78 patterns=2502
+[CG] día=247 iter=14 lp_obj=0.016910 best_rc=-0.00007200 neg=54 added=54 patterns=1422
+[CG] día=248 iter=21 lp_obj=28.026331 best_rc=-0.00000079 neg=66 added=66 patterns=2568
+[CG] día=247 iter=15 lp_obj=0.016865 best_rc=-0.00000100 neg=33 added=33 patterns=1455
+[CG] día=248 iter=22 lp_obj=28.026331 best_rc=-0.00000076 neg=61 added=61 patterns=2629
+[CG] día=247 iter=16 lp_obj=0.016866 best_rc=0.00000000 neg=0 added=0 patterns=1455
+[TIMER] MIP final obj=0.016911: +15.56s | total 17.10s
+[TIMER] Fin CG optimizado día 247: total 17.10s
+[CG] día=248 iter=23 lp_obj=28.026331 best_rc=-0.00000072 neg=49 added=49 patterns=2678
+[CG] día=248 iter=24 lp_obj=28.026331 best_rc=-0.00000072 neg=45 added=45 patterns=2723
+[CG] día=248 iter=25 lp_obj=28.026331 best_rc=-0.00000070 neg=45 added=45 patterns=2768
+[CG] día=248 iter=26 lp_obj=28.026331 best_rc=-0.00000070 neg=41 added=41 patterns=2809
+[CG] día=248 iter=27 lp_obj=28.026331 best_rc=-0.00000066 neg=24 added=24 patterns=2833
+[CG] día=248 iter=28 lp_obj=28.026331 best_rc=-0.00000066 neg=20 added=20 patterns=2853
+[CG] día=248 iter=29 lp_obj=28.026331 best_rc=-0.00000063 neg=15 added=15 patterns=2868
+[CG] día=248 iter=30 lp_obj=28.026331 best_rc=-0.00000062 neg=14 added=14 patterns=2882
+[CG] día=248 iter=31 lp_obj=28.026331 best_rc=-0.00000062 neg=12 added=12 patterns=2894
+[CG] día=248 iter=32 lp_obj=28.026331 best_rc=-0.00000062 neg=12 added=12 patterns=2906
+[CG] día=248 iter=33 lp_obj=28.026331 best_rc=-0.00000062 neg=12 added=12 patterns=2918
+[CG] día=248 iter=34 lp_obj=28.026331 best_rc=-0.00000058 neg=9 added=9 patterns=2927
+[CG] día=248 iter=35 lp_obj=28.026331 best_rc=-0.00000058 neg=9 added=9 patterns=2936
+[CG] día=248 iter=36 lp_obj=28.026331 best_rc=-0.00000058 neg=9 added=9 patterns=2945
+[CG] día=248 iter=37 lp_obj=28.026331 best_rc=-0.00000058 neg=7 added=7 patterns=2952
+[CG] día=248 iter=38 lp_obj=28.026331 best_rc=-0.00000055 neg=3 added=3 patterns=2955
+[CG] día=248 iter=39 lp_obj=28.026331 best_rc=-0.00000054 neg=3 added=3 patterns=2958
+[CG] día=248 iter=40 lp_obj=28.026331 best_rc=-0.00000054 neg=3 added=3 patterns=2961
+[CG] día=248 iter=41 lp_obj=28.026331 best_rc=-0.00000054 neg=3 added=3 patterns=2964
+[CG] día=248 iter=42 lp_obj=28.026331 best_rc=-0.00000054 neg=3 added=3 patterns=2967
+[CG] día=248 iter=43 lp_obj=28.026331 best_rc=-0.00000054 neg=3 added=3 patterns=2970
+[CG] día=248 iter=44 lp_obj=28.026331 best_rc=-0.00000049 neg=3 added=3 patterns=2973
+[CG] día=248 iter=45 lp_obj=28.026331 best_rc=-0.00000049 neg=3 added=3 patterns=2976
+[CG] día=248 iter=46 lp_obj=28.026331 best_rc=-0.00000045 neg=3 added=3 patterns=2979
+[CG] día=248 iter=47 lp_obj=28.026331 best_rc=-0.00000045 neg=3 added=3 patterns=2982
+[CG] día=248 iter=48 lp_obj=28.026331 best_rc=-0.00000045 neg=3 added=3 patterns=2985
+[CG] día=248 iter=49 lp_obj=28.026331 best_rc=-0.00000045 neg=3 added=3 patterns=2988
+[CG] día=248 iter=50 lp_obj=28.026331 best_rc=-0.00000045 neg=3 added=3 patterns=2991
+[CG] día=248 iter=51 lp_obj=28.026331 best_rc=-0.00000041 neg=3 added=3 patterns=2994
+[CG] día=248 iter=52 lp_obj=28.026331 best_rc=-0.00000037 neg=3 added=3 patterns=2997
+[CG] día=248 iter=53 lp_obj=28.026331 best_rc=-0.00000037 neg=3 added=3 patterns=3000
+[CG] día=248 iter=54 lp_obj=28.026331 best_rc=-0.00000037 neg=3 added=3 patterns=3003
+[CG] día=248 iter=55 lp_obj=28.026331 best_rc=-0.00000037 neg=3 added=3 patterns=3006
+[CG] día=248 iter=56 lp_obj=28.026331 best_rc=-0.00000032 neg=3 added=3 patterns=3009
+[CG] día=248 iter=57 lp_obj=28.026331 best_rc=-0.00000028 neg=3 added=3 patterns=3012
+[CG] día=248 iter=58 lp_obj=28.026331 best_rc=-0.00000024 neg=3 added=3 patterns=3015
+[CG] día=248 iter=59 lp_obj=28.026331 best_rc=0.00000000 neg=0 added=0 patterns=3015
+[TIMER] MIP final obj=28.026330: +62.20s | total 64.07s
+[TIMER] Fin CG optimizado día 248: total 64.07s
+
+================================================================================
+[INFO] Resolviendo día 249 | sesiones=40 | módulos=619
+[TIMER] Inicio CG optimizado día 249
+[TIMER] caché de patrones factibles: +2.61s | total 2.61s
+[TIMER] patrones iniciales: 40: +0.37s | total 2.97s
+[TIMER] modelo LP maestro construido: +0.04s | total 3.01s
+[CG] día=249 iter=1 lp_obj=39.034628 best_rc=-7.00283600 neg=94 added=94 patterns=134
+[CG] día=249 iter=2 lp_obj=39.034628 best_rc=-7.00283400 neg=109 added=109 patterns=243
+[CG] día=249 iter=3 lp_obj=39.034628 best_rc=-7.00283100 neg=120 added=120 patterns=363
+[CG] día=249 iter=4 lp_obj=38.033061 best_rc=-13.00516200 neg=120 added=120 patterns=483
+[CG] día=249 iter=5 lp_obj=30.026136 best_rc=-7.00251950 neg=116 added=116 patterns=599
+[CG] día=249 iter=6 lp_obj=30.026136 best_rc=-6.90943800 neg=120 added=120 patterns=719
+[CG] día=249 iter=7 lp_obj=30.024890 best_rc=-7.00139733 neg=111 added=111 patterns=830
+[CG] día=249 iter=8 lp_obj=9.945362 best_rc=-1.51893036 neg=120 added=120 patterns=950
+[CG] día=249 iter=9 lp_obj=8.524556 best_rc=-0.50378883 neg=117 added=117 patterns=1067
+[CG] día=249 iter=10 lp_obj=8.020977 best_rc=-0.00040200 neg=107 added=107 patterns=1174
+[CG] día=249 iter=11 lp_obj=8.020675 best_rc=-0.00020175 neg=76 added=76 patterns=1250
+[CG] día=249 iter=12 lp_obj=8.020673 best_rc=-0.00030550 neg=94 added=94 patterns=1344
+[CG] día=249 iter=13 lp_obj=8.020523 best_rc=-0.00005150 neg=55 added=55 patterns=1399
+[CG] día=249 iter=14 lp_obj=8.020472 best_rc=-0.00000200 neg=54 added=54 patterns=1453
+[CG] día=249 iter=15 lp_obj=8.020472 best_rc=-0.00000200 neg=2 added=2 patterns=1455
+[CG] día=249 iter=16 lp_obj=8.020472 best_rc=-0.00000200 neg=54 added=54 patterns=1509
+[CG] día=249 iter=17 lp_obj=8.020470 best_rc=0.00000000 neg=0 added=0 patterns=1509
+[TIMER] MIP final obj=8.020470: +28.69s | total 31.70s
+[TIMER] Fin CG optimizado día 249: total 31.70s
+
+================================================================================
+[INFO] Resolviendo día 250 | sesiones=33 | módulos=531
+[TIMER] Inicio CG optimizado día 250
+[TIMER] caché de patrones factibles: +1.83s | total 1.83s
+[TIMER] patrones iniciales: 33: +0.17s | total 2.00s
+[TIMER] modelo LP maestro construido: +0.03s | total 2.04s
+[CG] día=250 iter=1 lp_obj=4.012834 best_rc=-2.00213100 neg=73 added=73 patterns=106
+[CG] día=250 iter=2 lp_obj=4.012834 best_rc=-2.00212900 neg=85 added=85 patterns=191
+[CG] día=250 iter=3 lp_obj=4.012832 best_rc=-2.00212400 neg=99 added=99 patterns=290
+[CG] día=250 iter=4 lp_obj=4.012832 best_rc=-2.00212100 neg=99 added=99 patterns=389
+[CG] día=250 iter=5 lp_obj=4.012832 best_rc=-2.00211800 neg=97 added=97 patterns=486
+[CG] día=250 iter=6 lp_obj=4.012022 best_rc=-2.00120400 neg=99 added=99 patterns=585
+[CG] día=250 iter=7 lp_obj=0.010312 best_rc=-0.00101000 neg=99 added=99 patterns=684
+[CG] día=250 iter=8 lp_obj=0.009101 best_rc=-0.00070850 neg=99 added=99 patterns=783
+[CG] día=250 iter=9 lp_obj=0.007664 best_rc=-0.00030000 neg=95 added=95 patterns=878
+[CG] día=250 iter=10 lp_obj=0.007286 best_rc=-0.00000050 neg=40 added=40 patterns=918
+[CG] día=250 iter=11 lp_obj=0.007285 best_rc=0.00000000 neg=0 added=0 patterns=918
+[TIMER] MIP final obj=0.007285: +18.01s | total 20.04s
+[TIMER] Fin CG optimizado día 250: total 20.04s
+[TIMER] resultados guardados en C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Modelo INTRAdia V2\resultados_intradia_30_replicas\solution_intradia-2.xlsx: +234.95s | total 236.69s
+[TIMER] Fin modelo intradía optimizado: total 236.69s
