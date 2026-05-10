@@ -5,3 +5,102 @@ Output XLSX: C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Mode
 
 --- INICIO MODELO ---
 
+=================================================================
+  MODELO INTRADIA - CENTRO ONCOLÓGICO
+=================================================================
+
+[1/4] Cargando datos desde: C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Modelo Interdia\resultados_30_replicas\DatosV2-18.xlsx
+    > Configuración de tipos: 14 tipos de paciente
+    > Horizonte solicitado:   475 días
+    > Días en Motor_Arribos:  730 días
+
+    Centro oncológico:
+      Sillas:              15
+      Módulos ordinarios:  48  →  K = 720
+      Módulos extraordinarios: 8  →  K_ext = 120
+      Módulos farmacia:    20
+      N farmacéuticos:     9  →  Cap. Farmacia = 180
+    > Pacientes generados (total llegadas): 1961
+
+=================================================================
+  ESCENARIO: base
+  ALPHA = 0.1
+  BETA  = 100.0
+  GAMMA = 1.0
+  TimeLimit escenario = 600 segundos
+=================================================================
+
+[2/4] Construyendo modelo Gurobi...
+      Pacientes a programar: 1961
+      Días en horizonte:     475  [1 .. 475]
+      Pacientes descartados por tratamiento fuera de horizonte: 888
+      Pacientes en modelo: 1073
+Set parameter Username
+Set parameter LicenseID to value 2815222
+Academic license - for non-commercial use only - expires 2027-04-29
+Set parameter TimeLimit to value 600
+Set parameter MIPGap to value 0.01
+Set parameter Threads to value 1
+Set parameter DualReductions to value 0
+Set parameter InfUnbdInfo to value 1
+Set parameter BarHomogeneous to value 1
+Set parameter NumericFocus to value 3
+Set parameter MIPFocus to value 1
+Set parameter Heuristics to value 0.8
+Set parameter Cuts to value 2
+Set parameter RINS to value 10
+      Variables binarias: 195,384
+      Variables continuas: 476
+      Agregando restricciones...
+      R1 (unicidad sesiones):    13,060
+      R2 (capacidad diaria):     475
+      R3a (TBS entre sesiones):  11,803
+      R3b (TBC entre ciclos):    184
+      R5 (def. W máximo):        475
+
+[3/4] Resolviendo con Gurobi...
+      Time limit: 600s  |  MIP gap: 1.0%
+-----------------------------------------------------------------
+Gurobi Optimizer version 13.0.1 build v13.0.1rc0 (win64 - Windows 11+.0 (26200.2))
+
+CPU model: AMD Ryzen 5 4600U with Radeon Graphics, instruction set [SSE2|AVX|AVX2]
+Thread count: 6 physical cores, 12 logical processors, using up to 1 threads
+
+Non-default parameters:
+TimeLimit  600
+MIPGap  0.01
+BarHomogeneous  1
+Heuristics  0.8
+MIPFocus  1
+RINS  10
+Cuts  2
+DualReductions  0
+InfUnbdInfo  1
+NumericFocus  3
+Threads  1
+
+Optimize a model with 26472 rows, 195860 columns and 1141562 nonzeros (Min)
+Model fingerprint: 0x47f6831e
+Model has 15498 linear objective coefficients
+Variable types: 476 continuous, 195384 integer (195384 binary)
+Coefficient statistics:
+  Matrix range     [1e+00, 5e+02]
+  Objective range  [1e-01, 1e+02]
+  Bounds range     [1e+00, 1e+02]
+  RHS range        [1e+00, 7e+02]
+
+Presolve removed 294 rows and 5500 columns (presolve time = 5s)...
+Presolve removed 356 rows and 6628 columns
+Presolve time: 6.75s
+Presolved: 26116 rows, 189232 columns, 1078968 nonzeros
+Variable types: 476 continuous, 188756 integer (188756 binary)
+Root relaxation presolved: 26116 rows, 189232 columns, 1078968 nonzeros
+
+
+Root simplex log...
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    3.2000000e+00   2.368881e+04   0.000000e+00      9s
+    1323    4.6300365e+01   8.726514e+04   0.000000e+00     10s
+   10651    5.4815333e+01   1.866211e+04   0.000000e+00     15s
+   17700    5.5988937e+01   4.834136e+04   0.000000e+00     20s
