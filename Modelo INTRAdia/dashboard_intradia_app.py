@@ -166,6 +166,58 @@ def compute_kpis(f_prog, f_ocup, f_res=None, f_pend=None):
         "unattended": unattended,
     }
 
+DAILY_KPI_LABELS = {
+    "daily_sessions": "Sesiones por dia",
+    "daily_unique_patients": "Pacientes unicos por dia",
+    "daily_treatment_modules": "Modulos tratamiento por dia",
+    "daily_extra_modules": "Modulos extra por dia",
+    "daily_avg_wait": "Espera promedio diaria (mod)",
+    "daily_max_wait": "Espera maxima diaria (mod)",
+    "daily_peak_chairs": "Peak sillas",
+    "daily_peak_nurses": "Peak enfermeria",
+    "daily_peak_pharmacy": "Peak farmacia",
+}
+
+DAILY_LABEL_TO_KEY = {label: key for key, label in DAILY_KPI_LABELS.items()}
+
+def compute_daily_kpis(df_prog_source, df_ocup_source):
+    rows = []
+    if df_prog_source is None:
+        df_prog_source = pd.DataFrame()
+    if df_ocup_source is None:
+        df_ocup_source = pd.DataFrame()
+
+    prog_days = set(df_prog_source["day"].unique()) if "day" in df_prog_source.columns and not df_prog_source.empty else set()
+    ocup_days = set(df_ocup_source["day"].unique()) if "day" in df_ocup_source.columns and not df_ocup_source.empty else set()
+
+    for day in sorted(prog_days | ocup_days):
+        day_prog = df_prog_source[df_prog_source["day"] == day] if not df_prog_source.empty else pd.DataFrame()
+        day_ocup = df_ocup_source[df_ocup_source["day"] == day] if not df_ocup_source.empty else pd.DataFrame()
+
+        if "nurse_events" in day_ocup.columns:
+            nurse_series = day_ocup["nurse_events"]
+        elif "nurse_starts" in day_ocup.columns and "nurse_ends" in day_ocup.columns:
+            nurse_series = day_ocup["nurse_starts"] + day_ocup["nurse_ends"]
+        elif "nurse_starts" in day_ocup.columns:
+            nurse_series = day_ocup["nurse_starts"]
+        else:
+            nurse_series = pd.Series(dtype=float)
+
+        rows.append({
+            "day": int(day),
+            "daily_sessions": int(len(day_prog)),
+            "daily_unique_patients": int(day_prog["patient_id"].nunique()) if not day_prog.empty else 0,
+            "daily_treatment_modules": float(day_prog["treatment_modules"].sum()) if not day_prog.empty else 0.0,
+            "daily_extra_modules": float(day_prog["extra_chair_modules"].sum()) if not day_prog.empty else 0.0,
+            "daily_avg_wait": float(day_prog["treatment_start"].mean()) if not day_prog.empty else 0.0,
+            "daily_max_wait": float(day_prog["treatment_start"].max()) if not day_prog.empty else 0.0,
+            "daily_peak_chairs": float(day_ocup["chairs_used"].max()) if not day_ocup.empty else 0.0,
+            "daily_peak_nurses": float(nurse_series.max()) if not nurse_series.empty else 0.0,
+            "daily_peak_pharmacy": float(day_ocup["pharmacy_used"].max()) if not day_ocup.empty else 0.0,
+        })
+
+    return pd.DataFrame(rows)
+
 def load_confidence_interval_outputs():
     candidates = [
         SCRIPT_DIR / "resultados_intradia_30_replicas",
@@ -651,6 +703,26 @@ def render_intervalos_confianza():
                 fill="tonexty",
                 line=dict(color="#94a3b8", dash="dot"),
             ))
+
+            if df_prog_raw_base is not None and not df_prog_raw_base.empty:
+                base_daily_prog = df_prog_raw_base[
+                    (df_prog_raw_base["day"] >= start_d) & (df_prog_raw_base["day"] <= end_d)
+                ].copy()
+                base_daily_ocup = df_ocup_raw_base[
+                    (df_ocup_raw_base["day"] >= start_d) & (df_ocup_raw_base["day"] <= end_d)
+                ].copy()
+                base_daily = compute_daily_kpis(base_daily_prog, base_daily_ocup)
+                selected_key = DAILY_LABEL_TO_KEY.get(selected_kpi)
+                if selected_key in base_daily.columns:
+                    fig.add_trace(go.Scatter(
+                        x=base_daily["day"],
+                        y=base_daily[selected_key],
+                        mode="lines+markers",
+                        name="Caso base",
+                        line=dict(color="#f59e0b", dash="dash", width=3),
+                        marker=dict(size=5),
+                    ))
+
             fig.update_layout(plot_bgcolor="rgba(0,0,0,0)", xaxis_title="Dia", yaxis_title=selected_kpi)
             st.plotly_chart(fig, width='stretch')
 
