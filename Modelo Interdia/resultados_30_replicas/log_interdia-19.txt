@@ -155,3 +155,97 @@ H   10    10                     129.9000000  106.41705  18.1%   140  127s
     16    18  106.41705   14 1555  129.90000  106.41705  18.1%  92.5  141s
     17    19  106.41705   15 1555  129.90000  106.41705  18.1%  87.1  149s
     18    20  106.41705   16 1552  129.90000  106.41705  18.1%  82.7  150s
+    22    24  106.41705   20 1552  129.90000  106.41705  18.1%  67.9  156s
+    24    26  106.41705   22 1552  129.90000  106.41705  18.1%  62.3  161s
+    27    29  106.41705   25 1552  129.90000  106.41705  18.1%  55.5  165s
+    32    34  106.41705   30 1552  129.90000  106.41705  18.1%  47.0  171s
+    36    38  106.41705   34 1551  129.90000  106.41705  18.1%  42.0  175s
+    40    42  106.41705   38 1552  129.90000  106.41705  18.1%  38.7  180s
+    45    47  106.41705   43 1551  129.90000  106.41705  18.1%  34.5  187s
+[CALLBACK] Corte por estancamiento: 60s sin mejorar gap. Best gap=0.180777 runtime=189.5s
+
+Explored 47 nodes (85398 simplex iterations) in 189.58 seconds (80.38 work units)
+Thread count was 1 (of 12 available processors)
+
+Solution count 4: 129.9 130.9 132.9 133 
+
+Solve interrupted
+Best objective 1.299000000000e+02, best bound 1.064170529785e+02, gap 18.0777%
+
+User-callback calls 27863, time in user-callback 0.40 sec
+-----------------------------------------------------------------
+      Tiempo de resolución: 189.6s
+      Status: 11 (INTERRUMPIDO POR CALLBACK)
+      Valor objetivo: 129.9000
+      MIP Gap final:  18.08%
+
+[4/4] Extrayendo resultados...
+      > Validación capacidad total: ninguna jornada supera 840 módulos.
+      W del modelo: 719.0  |  Máx. ocupación real: 719.0  |  Diferencia: 0.00
+
+=================================================================
+  RESUMEN DE RESULTADOS
+=================================================================
+  Horizonte:               475 días (día 1 .. 475)
+  MAX_ESPERA:              14 días
+  MIP_GAP solicitado:      1.0%
+  TimeLimit:               600s
+  Capacidad: K=720  K_ext=120  Total=840
+
+  Estado del solver:       INTERRUMPIDO POR CALLBACK
+  Valor objetivo (z):      129.9000
+  MIP Gap final:           18.08%
+  W del modelo:            719.0 módulos  (99.9% de K  |  85.6% de cap. total)
+
+  Máxima ocupación real:   719 módulos (cap. máx.=840)
+  Ocupación promedio:      454.4 módulos  (54.1% de cap. total)
+  Día de mayor ocupación:  día 292  (719 módulos)
+  Días con módulos extra:  0  (total extra: 0 mód-día  |  max en un día: 0/120)
+  Días con holgura activa: 0  (total: 0.0 módulos-día)
+
+  Pacientes programados:   1081
+  Total sesiones agendadas: 13,763
+  Espera promedio (1ª ses):    0.1 días  [ciclo=1, sesion=1]
+  Espera máxima (1ª ses):      3 días  [ciclo=1, sesion=1]
+
+  Sesiones por tipo de paciente:
+    Tipo  2:    14 pacientes  |     168 sesiones  |      1344 módulos totales
+    Tipo  3:   101 pacientes  |    2424 sesiones  |     38784 módulos totales
+    Tipo  4:    93 pacientes  |     558 sesiones  |     13950 módulos totales
+    Tipo  5:    66 pacientes  |    1584 sesiones  |     25344 módulos totales
+    Tipo  6:    46 pacientes  |     690 sesiones  |     13800 módulos totales
+    Tipo  7:   300 pacientes  |    1200 sesiones  |     16800 módulos totales
+    Tipo  8:   113 pacientes  |     565 sesiones  |      8475 módulos totales
+    Tipo  9:    43 pacientes  |    1935 sesiones  |     29025 módulos totales
+    Tipo 10:   150 pacientes  |    3600 sesiones  |     57600 módulos totales
+    Tipo 11:    63 pacientes  |     315 sesiones  |      2520 módulos totales
+    Tipo 12:    39 pacientes  |     156 sesiones  |      2496 módulos totales
+    Tipo 13:    17 pacientes  |     136 sesiones  |      1360 módulos totales
+    Tipo 14:    36 pacientes  |     432 sesiones  |      4320 módulos totales
+=================================================================
+
+  > Schedule exportado a:  
+  > Resumen exportado a:   
+  > Output intradía XLSX:  C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Modelo Interdia\resultados_30_replicas\solution_interday-19.xlsx
+
+  --- Diagnóstico escenario: base ---
+  Status Gurobi:           11 (INTERRUMPIDO POR CALLBACK)
+  Solución factible:       Sí
+  Objective value:         129.9
+  Best bound:              106.4171
+  Gap final:               18.08%
+  Runtime solver:          189.6s
+  Pacientes programados:   1081
+  Sesiones agendadas:      13763
+  Máx. ocupación diaria:  719.0
+  Días con módulos extra:  0
+  Total módulos extra:     0.0
+  Máx. módulos extra/día: 0.0
+  Espera promedio 1ª ses:  0.1
+  Espera máxima 1ª ses:    3
+  W del modelo:            719.0
+  Máx. ocupación real:     719.0
+  Diferencia W - max_ocup: 0.0
+
+  Tiempo total de ejecución: 216.8s
+=================================================================
