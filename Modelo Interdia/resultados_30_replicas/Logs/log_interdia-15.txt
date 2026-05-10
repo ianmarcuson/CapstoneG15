@@ -1,0 +1,280 @@
+Replica: 15
+Seed: 12360
+Datos: C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Modelo Interdia\resultados_10_replicas\DatosV2-15.xlsx
+Output XLSX: C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Modelo Interdia\resultados_10_replicas\solution_interday-15.xlsx
+
+--- INICIO MODELO ---
+
+=================================================================
+  MODELO INTRADIA - CENTRO ONCOLÓGICO
+=================================================================
+
+[1/4] Cargando datos desde: C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Modelo Interdia\resultados_10_replicas\DatosV2-15.xlsx
+    > Configuración de tipos: 14 tipos de paciente
+    > Horizonte solicitado:   475 días
+    > Días en Motor_Arribos:  730 días
+
+    Centro oncológico:
+      Sillas:              15
+      Módulos ordinarios:  48  →  K = 720
+      Módulos extraordinarios: 8  →  K_ext = 120
+    > Pacientes generados (total llegadas): 1872
+
+=================================================================
+  ESCENARIO: base
+  ALPHA = 0.1
+  BETA  = 100.0
+  GAMMA = 1.0
+  TimeLimit escenario = 250 segundos
+=================================================================
+
+[2/4] Construyendo modelo Gurobi...
+      Pacientes a programar: 1872
+      Días en horizonte:     475  [1 .. 475]
+      Pacientes descartados por tratamiento fuera de horizonte: 858
+      Pacientes en modelo: 1014
+Set parameter Username
+Set parameter LicenseID to value 2815222
+Academic license - for non-commercial use only - expires 2027-04-29
+Set parameter TimeLimit to value 250
+Set parameter MIPGap to value 0.01
+Set parameter Threads to value 1
+Set parameter DualReductions to value 0
+Set parameter InfUnbdInfo to value 1
+Set parameter BarHomogeneous to value 1
+Set parameter NumericFocus to value 3
+Set parameter MIPFocus to value 1
+Set parameter Heuristics to value 0.8
+Set parameter Cuts to value 2
+Set parameter RINS to value 10
+      Variables binarias: 193,949
+      Variables continuas: 476
+      Agregando restricciones...
+      R1 (unicidad sesiones):    12,961
+      R2 (capacidad diaria):     475
+      R3a (TBS entre sesiones):  11,731
+      R3b (TBC entre ciclos):    216
+      R5 (def. W máximo):        475
+
+[3/4] Resolviendo con Gurobi...
+      Time limit: 250s  |  MIP gap: 1.0%
+-----------------------------------------------------------------
+Gurobi Optimizer version 13.0.1 build v13.0.1rc0 (win64 - Windows 11+.0 (26200.2))
+
+CPU model: AMD Ryzen 5 4600U with Radeon Graphics, instruction set [SSE2|AVX|AVX2]
+Thread count: 6 physical cores, 12 logical processors, using up to 1 threads
+
+Non-default parameters:
+TimeLimit  250
+MIPGap  0.01
+BarHomogeneous  1
+Heuristics  0.8
+MIPFocus  1
+RINS  10
+Cuts  2
+DualReductions  0
+InfUnbdInfo  1
+NumericFocus  3
+Threads  1
+
+Optimize a model with 25858 rows, 194425 columns and 940707 nonzeros (Min)
+Model fingerprint: 0x8ba262f3
+Model has 14672 linear objective coefficients
+Variable types: 476 continuous, 193949 integer (193949 binary)
+Coefficient statistics:
+  Matrix range     [1e+00, 5e+02]
+  Objective range  [1e-01, 1e+02]
+  Bounds range     [1e+00, 1e+02]
+  RHS range        [1e+00, 7e+02]
+
+Presolve removed 334 rows and 5438 columns (presolve time = 5s)...
+Presolve removed 494 rows and 7716 columns
+Presolve time: 8.71s
+Presolved: 25364 rows, 186709 columns, 885570 nonzeros
+Variable types: 476 continuous, 186233 integer (186233 binary)
+Found heuristic solution: objective 31399.400000
+Root relaxation presolved: 25364 rows, 186709 columns, 885570 nonzeros
+
+
+Root simplex log...
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    6.4000000e+00   2.174197e+04   0.000000e+00     12s
+    3233    1.2352597e+01   7.862366e+04   0.000000e+00     15s
+    7553    1.2354049e+01   1.570765e+05   0.000000e+00     20s
+   11279    1.2355847e+01   6.037296e+05   0.000000e+00     25s
+   14789    1.2358297e+01   3.223330e+06   0.000000e+00     30s
+   18245    1.2361419e+01   2.204479e+06   0.000000e+00     35s
+   21377    1.2366556e+01   5.342231e+06   0.000000e+00     40s
+   22007    1.2515667e+01   2.972470e+07   0.000000e+00     46s
+   22277    1.4592857e+01   2.125347e+06   0.000000e+00     50s
+   22647    1.5557727e+01   1.149488e+06   0.000000e+00     55s
+   23189    3.5018601e+01   3.689593e+06   0.000000e+00     60s
+   23965    5.3589789e+01   1.121187e+06   0.000000e+00     65s
+   26449    5.6780827e+01   8.609969e+05   0.000000e+00     70s
+   28069    5.7142166e+01   1.423307e+06   0.000000e+00     75s
+   30337    5.7740783e+01   3.037688e+04   0.000000e+00     80s
+   32389    5.8046494e+01   2.361792e+04   0.000000e+00     85s
+   34711    5.8327980e+01   6.422904e+04   0.000000e+00     90s
+   37519    5.8504031e+01   4.814256e+04   0.000000e+00     95s
+   40165    5.8628715e+01   5.192202e+04   0.000000e+00    100s
+   42325    5.8843419e+01   9.226400e+04   0.000000e+00    105s
+   44701    5.9053792e+01   8.262485e+04   0.000000e+00    110s
+   46537    5.9352047e+01   2.288895e+05   0.000000e+00    115s
+   49075    5.9495062e+01   7.442653e+04   0.000000e+00    120s
+   52045    5.9874143e+01   4.827980e+04   0.000000e+00    125s
+   54173    6.0312514e+01   2.849875e+04   0.000000e+00    130s
+   57143    6.1282965e+01   7.245767e+04   0.000000e+00    135s
+   60329    6.1515290e+01   3.549676e+04   0.000000e+00    140s
+   63569    6.1818925e+01   1.172142e+04   0.000000e+00    145s
+   65837    6.1956429e+01   2.022446e+04   0.000000e+00    150s
+   67943    6.2358706e+01   4.714463e+03   0.000000e+00    155s
+   71129    6.3280322e+01   4.692319e+03   0.000000e+00    160s
+   74909    6.5927022e+01   2.102439e+03   0.000000e+00    165s
+   78635    7.3317460e+01   4.599318e+02   0.000000e+00    170s
+   80041    7.9434167e+01   0.000000e+00   0.000000e+00    172s
+
+Use crossover to convert LP symmetric solution to basic solution...
+
+Root crossover log...
+
+   20140 DPushes remaining with DInf 0.0000000e+00               172s
+       0 DPushes remaining with DInf 0.0000000e+00               172s
+
+      12 PPushes remaining with PInf 0.0000000e+00               172s
+       0 PPushes remaining with PInf 0.0000000e+00               172s
+
+  Push phase complete: Pinf 0.0000000e+00, Dinf 3.2751579e-15    172s
+
+
+Root simplex log...
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+   84472    7.9434167e+01   0.000000e+00   0.000000e+00    172s
+Crossover time: 0.16 seconds (0.04 work units)
+
+Root relaxation: objective 7.943417e+01, 84472 iterations, 161.66 seconds (41.63 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0   79.43417    0  588 31399.4000   79.43417   100%     -  172s
+     0     0   79.43417    0  537 31399.4000   79.43417   100%     -  175s
+H    0     0                    3889.3000000   79.43417  98.0%     -  176s
+H    0     0                    3790.3000000   79.43417  97.9%     -  176s
+H    0     0                    2990.3000000   79.43417  97.3%     -  176s
+H    0     0                    2889.3000000   79.43417  97.3%     -  176s
+H    0     0                    2790.3000000   79.43417  97.2%     -  176s
+H    0     0                    2689.3000000   79.43417  97.0%     -  176s
+H    0     0                    2491.3000000   79.43417  96.8%     -  176s
+H    0     0                    2489.3000000   79.43417  96.8%     -  176s
+H    0     0                    1390.3000000   79.43417  94.3%     -  177s
+H    0     0                    1390.2999996   79.43417  94.3%     -  179s
+H    0     0                    1387.3000000   79.43417  94.3%     -  186s
+H    0     0                    1190.1000000   79.43417  93.3%     -  186s
+H    0     0                    1189.1000000   79.43417  93.3%     -  186s
+H    0     0                    1107.8000000   80.15417  92.8%     -  191s
+H    0     0                     310.8000000   80.15417  74.2%     -  191s
+H    0     0                     304.8000000   80.15417  73.7%     -  192s
+H    0     0                      89.8000000   80.15417  10.7%     -  192s
+H    0     0                      88.9000000   80.15417  9.84%     -  192s
+H    0     0                      88.8000000   80.15417  9.74%     -  192s
+     0     2   80.15417    0  537   88.80000   80.15417  9.74%     -  192s
+H    1     1                      87.9000000   80.15417  8.81%   0.0  194s
+H    1     1                      87.8000000   80.15417  8.71%   0.0  196s
+H    1     1                      86.8000000   80.15417  7.66%   0.0  197s
+     1     3   80.15417    1  537   86.80000   80.15417  7.66%   1.0  204s
+     2     4   80.15417    2  537   86.80000   80.15417  7.66%   1.0  205s
+     5     7   80.15417    5  537   86.80000   80.15417  7.66%   1.0  210s
+     7     9   80.15417    7  537   86.80000   80.15417  7.66%   1.0  215s
+     9    11   80.15417    9  537   86.80000   80.15417  7.66%   1.0  221s
+    11    13   80.15417   11  537   86.80000   80.15417  7.66%   1.0  225s
+    13    15   80.15417   13  537   86.80000   80.15417  7.66%   1.0  230s
+    19    21   80.15417   19  537   86.80000   80.15417  7.66%   1.0  235s
+    27    29   80.15417   27  537   86.80000   80.15417  7.66%   1.0  240s
+    34    36   80.15417   34  537   86.80000   80.15417  7.66%   1.0  246s
+    40    42   80.15417   40  537   86.80000   80.15417  7.66%   1.0  250s
+
+Explored 41 nodes (87641 simplex iterations) in 250.07 seconds (71.29 work units)
+Thread count was 1 (of 12 available processors)
+
+Solution count 10: 86.8 87.8 87.9 ... 1189.1
+
+Time limit reached
+Best objective 8.680000000000e+01, best bound 8.015416566667e+01, gap 7.6565%
+-----------------------------------------------------------------
+      Tiempo de resolución: 250.1s
+      Status: 9 (LÍMITE DE TIEMPO)
+      Valor objetivo: 86.8000
+      MIP Gap final:  7.66%
+
+[4/4] Extrayendo resultados...
+      > Validación capacidad total: ninguna jornada supera 840 módulos.
+      W del modelo: 718.0  |  Máx. ocupación real: 718.0  |  Diferencia: 0.00
+
+=================================================================
+  RESUMEN DE RESULTADOS
+=================================================================
+  Horizonte:               475 días (día 1 .. 475)
+  MAX_ESPERA:              14 días
+  MIP_GAP solicitado:      1.0%
+  TimeLimit:               250s
+  Capacidad: K=720  K_ext=120  Total=840
+
+  Estado del solver:       FACTIBLE (límite de tiempo)
+  Valor objetivo (z):      86.8000
+  MIP Gap final:           7.66%
+  W del modelo:            718.0 módulos  (99.7% de K  |  85.5% de cap. total)
+
+  Máxima ocupación real:   718 módulos (cap. máx.=840)
+  Ocupación promedio:      428.1 módulos  (51.0% de cap. total)
+  Día de mayor ocupación:  día 155  (718 módulos)
+  Días con módulos extra:  0  (total extra: 0 mód-día  |  max en un día: 0/120)
+  Días con holgura activa: 0  (total: 0.0 módulos-día)
+
+  Pacientes programados:   1014
+  Total sesiones agendadas: 12,961
+  Espera promedio (1ª ses):    0.0 días  [ciclo=1, sesion=1]
+  Espera máxima (1ª ses):      1 días  [ciclo=1, sesion=1]
+
+  Sesiones por tipo de paciente:
+    Tipo  2:    12 pacientes  |     144 sesiones  |      1152 módulos totales
+    Tipo  3:   109 pacientes  |    2616 sesiones  |     41856 módulos totales
+    Tipo  4:    94 pacientes  |     564 sesiones  |     14100 módulos totales
+    Tipo  5:    64 pacientes  |    1536 sesiones  |     24576 módulos totales
+    Tipo  6:    31 pacientes  |     465 sesiones  |      9300 módulos totales
+    Tipo  7:   272 pacientes  |    1088 sesiones  |     15232 módulos totales
+    Tipo  8:    93 pacientes  |     465 sesiones  |      6975 módulos totales
+    Tipo  9:    27 pacientes  |    1215 sesiones  |     18225 módulos totales
+    Tipo 10:   161 pacientes  |    3864 sesiones  |     61824 módulos totales
+    Tipo 11:    68 pacientes  |     340 sesiones  |      2720 módulos totales
+    Tipo 12:    32 pacientes  |     128 sesiones  |      2048 módulos totales
+    Tipo 13:    19 pacientes  |     152 sesiones  |      1520 módulos totales
+    Tipo 14:    32 pacientes  |     384 sesiones  |      3840 módulos totales
+=================================================================
+
+  > Schedule exportado a:  C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Modelo Interdia\resultados_10_replicas\schedule_resultado-15.csv
+  > Resumen exportado a:   C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Modelo Interdia\resultados_10_replicas\resumen_diario-15.csv
+  > Output intradía XLSX:  C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Modelo Interdia\resultados_10_replicas\solution_interday-15.xlsx
+
+  --- Diagnóstico escenario: base ---
+  Status Gurobi:           9 (LÍMITE DE TIEMPO)
+  Solución factible:       Sí
+  Objective value:         86.8
+  Best bound:              80.1542
+  Gap final:               7.66%
+  Runtime solver:          250.1s
+  Pacientes programados:   1014
+  Sesiones agendadas:      12961
+  Máx. ocupación diaria:  718.0
+  Días con módulos extra:  0
+  Total módulos extra:     0.0
+  Máx. módulos extra/día: 0.0
+  Espera promedio 1ª ses:  0.0
+  Espera máxima 1ª ses:    1
+  W del modelo:            718.0
+  Máx. ocupación real:     718.0
+  Diferencia W - max_ocup: 0.0
+
+  Tiempo total de ejecución: 273.9s
+=================================================================

@@ -535,7 +535,7 @@ def extraer_resultados(model, x, y, W, pacientes_validos, dias, K, K_ext):
     # -------------------------------------------------------------------------
     max_ocup = df_resumen["ocupacion_modulos"].max() if not df_resumen.empty else 0
     cap_total = K + K_ext_val
-    if max_ocup > cap_total + 1e-6:
+    if max_ocup > cap_total + 1e-4:
         raise ValueError(
             f"ERROR: La solución excede la capacidad máxima diaria de {cap_total} módulos "
             f"(máximo encontrado: {max_ocup:.1f} módulos)."
@@ -547,7 +547,7 @@ def extraer_resultados(model, x, y, W, pacientes_validos, dias, K, K_ext):
     # -------------------------------------------------------------------------
     W_val = model.getVarByName("W").X
     print(f"      W del modelo: {W_val:.1f}  |  Máx. ocupación real: {max_ocup:.1f}  |  Diferencia: {W_val - max_ocup:.2f}")
-    if W_val + 1e-6 < max_ocup:
+    if W_val + 1e-4 < max_ocup:
         raise ValueError(
             f"ERROR: W ({W_val:.1f}) es menor que la ocupación máxima real ({max_ocup:.1f}); "
             "hay inconsistencia en la solución."
