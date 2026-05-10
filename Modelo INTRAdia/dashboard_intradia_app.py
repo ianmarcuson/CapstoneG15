@@ -657,6 +657,87 @@ def render_intervalos_confianza():
     c2.metric("KPIs resumidos", len(df_ic))
     c3.metric("Dias con IC diario", int(df_daily["day"].nunique()) if "day" in df_daily.columns and not df_daily.empty else 0)
 
+    def _summary_row(kpi):
+        row = df_ic[df_ic["kpi"] == kpi] if "kpi" in df_ic.columns else pd.DataFrame()
+        if not row.empty:
+            return row.iloc[0]
+        if kpi in df_rep.columns:
+            values = pd.to_numeric(df_rep[kpi], errors="coerce").dropna()
+            if not values.empty:
+                return pd.Series({
+                    "mean": values.mean(),
+                    "min": values.min(),
+                    "max": values.max(),
+                    "n": len(values),
+                })
+        return pd.Series(dtype=float)
+
+    def _format_kpi(value, is_percent=False, is_mod=False, is_day=False):
+        if pd.isna(value):
+            return "N/A"
+        if is_day:
+            return f"Dia {int(round(value))}"
+        if is_percent:
+            return f"{float(value):.1f}%"
+        if is_mod:
+            return f"{float(value):.2f} mod" if abs(float(value) - round(float(value))) > 1e-9 else f"{int(round(value))} mod"
+        return f"{float(value):,.1f}" if abs(float(value) - round(float(value))) > 1e-9 else f"{int(round(value)):,}"
+
+    def _render_ic_metric(col, label, kpi, is_percent=False, is_mod=False, is_day=False):
+        row = _summary_row(kpi)
+        mean = row.get("mean", np.nan)
+        min_v = row.get("min", np.nan)
+        max_v = row.get("max", np.nan)
+        with col:
+            st.metric(label, _format_kpi(mean, is_percent, is_mod, is_day))
+            st.caption(
+                f"Promedio 30 sim. | Min: {_format_kpi(min_v, is_percent, is_mod, is_day)} | "
+                f"Max: {_format_kpi(max_v, is_percent, is_mod, is_day)}"
+            )
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("### Indicadores de Desempeno Operacional (KPIs)")
+    st.markdown("Promedio, minimo y maximo observados en las replicas disponibles.")
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    st.markdown("##### 1. Demanda y Flujo")
+    c1, c2, c3, c4 = st.columns(4)
+    _render_ic_metric(c1, "1. Total Sesiones", "sessions")
+    _render_ic_metric(c2, "2. Pacientes Unicos", "unique_patients")
+    _render_ic_metric(c3, "3. Dia Mas Cargado", "most_loaded_day", is_day=True)
+    _render_ic_metric(c4, "4. Cumpl. Horario Reg.", "cumplimiento", is_percent=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("##### 2. Espera Real (Llegada al Centro -> Inicio Tratamiento)")
+    st.caption("Mide los modulos transcurridos desde que el paciente llega al centro (mod. 0) hasta que inicia su tratamiento en silla.")
+    c5, c6, c7, c8 = st.columns(4)
+    _render_ic_metric(c5, "5. Espera Maxima", "max_wait", is_mod=True)
+    _render_ic_metric(c6, "6. Espera Promedio", "avg_wait", is_mod=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("##### 3. Capacidad y Utilizacion de Recursos")
+    c9, c10, c11, c12 = st.columns(4)
+    _render_ic_metric(c9, "7. Utilizacion Sillas (Total)", "util_chairs", is_percent=True)
+    _render_ic_metric(c10, "8. Util. Sillas (Solo Reg.)", "util_chairs_reg", is_percent=True)
+    _render_ic_metric(c11, "9. Ocupacion Enfermeria", "util_nurses", is_percent=True)
+    _render_ic_metric(c12, "10. Ocupacion Farmacia (Mod.0-20)", "util_pharm", is_percent=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("##### 4. Saturacion Extraordinaria")
+    c13, c14, c15, c16 = st.columns(4)
+    _render_ic_metric(c13, "11. Modulos Extra Totales", "total_extra")
+    _render_ic_metric(c14, "12. Dias con Extra", "days_extra")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("##### 5. Cobertura y Atrasos")
+    st.caption("Indicadores que capturan el costo oculto de los modelos: sesiones que se postponen o quedan sin atender.")
+    c17, c18, c19 = st.columns(3)
+    _render_ic_metric(c17, "13. Sesiones Postponadas", "postponed_sessions")
+    _render_ic_metric(c18, "14. Pacientes No Atendidos", "unattended")
+
+    st.markdown("---")
+    st.markdown("### Tablas de detalle")
+
     st.markdown("#### Resumen por KPI")
     cols = ["label", "n", "min", "max", "mean", "std", "se", "ci95_low", "ci95_high"]
     available_cols = [c for c in cols if c in df_ic.columns]
