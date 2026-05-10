@@ -1,29 +1,12 @@
 # Capstone G15 - Programacion Oncologica Interdia e Intradia
 
-Este repositorio contiene el codigo usado para planificar sesiones de tratamiento en dos niveles:
+Este proyecto aborda la planificacion de tratamientos oncologicos en un centro de infusion, separando la decision en dos niveles. Primero, el **modelo Interdia** asigna sesiones a dias del horizonte mediante un MILP. Luego, el **modelo Intradia** agenda las sesiones dentro de cada dia mediante generacion de columnas, considerando sillas, farmacia, enfermeria, modulos ordinarios y modulos extraordinarios.
 
-1. **Modelo Interdia**: asigna sesiones a dias del horizonte de planificacion.
-2. **Modelo Intradia**: toma la asignacion interdia y agenda cada sesion dentro del dia, considerando sillas, farmacia, enfermeria, modulos ordinarios y modulos extraordinarios.
-3. **Dashboard Streamlit**: permite revisar resultados, KPIs, intervalos de confianza y visualizaciones diarias.
-
-La forma mas rapida de revisar los resultados actuales es ejecutar directamente el dashboard, porque el repositorio ya incluye outputs generados para 30 replicas.
+El repositorio tambien incluye un **dashboard Streamlit** para revisar resultados, KPIs, intervalos de confianza y visualizaciones diarias. La forma mas rapida de revisar los resultados actuales es usar la visualizacion oficial o ejecutar el dashboard localmente, porque el repositorio ya incluye outputs generados para 30 replicas.
 
 Visualizacion oficial de los datos:
 
 https://capstoneg15.streamlit.app/
-
-## Requisitos
-
-- Python 3.10 o superior.
-- Gurobi instalado y con licencia activa para correr los modelos de optimizacion.
-- Paquetes Python:
-
-```bash
-pip install -r requirements.txt
-pip install gurobipy numpy
-```
-
-`gurobipy` no siempre se instala correctamente solo desde `requirements.txt`, porque depende de la instalacion/licencia local de Gurobi. Si el solver no esta disponible, el dashboard igual puede abrir resultados ya generados, pero no se podran regenerar modelos.
 
 ## Estructura del repositorio
 
@@ -196,7 +179,7 @@ Ese archivo define:
 - horizonte de planificacion
 - capacidad ordinaria y extraordinaria
 - pesos de la funcion objetivo
-- limite de tiempo y gap de Gurobi
+- limite de tiempo y gap del solver
 - nombres de outputs
 
 ## Ejecutar un solo modelo Intradia
@@ -223,7 +206,7 @@ Argumentos utiles:
 - `--day N`: resuelve solo el dia `N`. Puede repetirse.
 - `--all-days`: resuelve todos los dias con sesiones.
 - `--max-days N`: resuelve los primeros `N` dias si no se usa `--all-days`.
-- `--workers 1`: recomendado si la licencia Gurobi tiene restricciones.
+- `--workers 1`: ejecuta la resolucion intradia en modo secuencial.
 - `--extra-weight`: peso por modulo extraordinario.
 - `--wait-weight`: peso por espera entre farmacia lista e inicio de tratamiento.
 - `--end-weight`: peso por terminar mas tarde dentro del dia.
@@ -263,11 +246,3 @@ Los CSV de la carpeta `resultados_intradia_30_replicas` resumen la variabilidad 
 - `kpis_intradia_daily_ic95.csv`: KPIs por dia con media, minimo, maximo e IC 95%.
 - `kpis_intradia_replicas.csv`: una fila por replica.
 - `kpis_intradia_most_loaded_day_freq.csv`: frecuencia del dia mas cargado.
-
-## Notas para correccion
-
-- Para revisar resultados sin esperar corridas largas, usar el dashboard directamente.
-- Para reproducir todo desde cero, correr primero Interdia, luego Intradia, luego IC.
-- Las corridas completas pueden tardar bastante, especialmente Intradia con 30 replicas y todos los dias.
-- Si Gurobi falla por licencia o paralelismo, usar `--workers 1` y `--replica-workers 1`.
-- Los logs `log_interdia-i.txt` y `log_intradia-i.txt` permiten revisar errores o tiempos de ejecucion por replica.
