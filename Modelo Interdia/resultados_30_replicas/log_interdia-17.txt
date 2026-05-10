@@ -1,0 +1,110 @@
+Replica: 17
+Seed: 12362
+Datos: C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Modelo Interdia\resultados_30_replicas\DatosV2-17.xlsx
+Output XLSX: C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Modelo Interdia\resultados_30_replicas\solution_interday-17.xlsx
+
+--- INICIO MODELO ---
+
+=================================================================
+  MODELO INTRADIA - CENTRO ONCOLÓGICO
+=================================================================
+
+[1/4] Cargando datos desde: C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Modelo Interdia\resultados_30_replicas\DatosV2-17.xlsx
+    > Configuración de tipos: 14 tipos de paciente
+    > Horizonte solicitado:   475 días
+    > Días en Motor_Arribos:  730 días
+
+    Centro oncológico:
+      Sillas:              15
+      Módulos ordinarios:  48  →  K = 720
+      Módulos extraordinarios: 8  →  K_ext = 120
+      Módulos farmacia:    20
+      N farmacéuticos:     9  →  Cap. Farmacia = 180
+    > Pacientes generados (total llegadas): 1927
+
+=================================================================
+  ESCENARIO: base
+  ALPHA = 0.1
+  BETA  = 100.0
+  GAMMA = 1.0
+  TimeLimit escenario = 600 segundos
+=================================================================
+
+[2/4] Construyendo modelo Gurobi...
+      Pacientes a programar: 1927
+      Días en horizonte:     475  [1 .. 475]
+      Pacientes descartados por tratamiento fuera de horizonte: 832
+      Pacientes en modelo: 1095
+Set parameter Username
+Set parameter LicenseID to value 2815222
+Academic license - for non-commercial use only - expires 2027-04-29
+Set parameter TimeLimit to value 600
+Set parameter MIPGap to value 0.01
+Set parameter Threads to value 1
+Set parameter DualReductions to value 0
+Set parameter InfUnbdInfo to value 1
+Set parameter BarHomogeneous to value 1
+Set parameter NumericFocus to value 3
+Set parameter MIPFocus to value 1
+Set parameter Heuristics to value 0.8
+Set parameter Cuts to value 2
+Set parameter RINS to value 10
+      Variables binarias: 203,069
+      Variables continuas: 476
+      Agregando restricciones...
+      R1 (unicidad sesiones):    13,574
+      R2 (capacidad diaria):     475
+      R3a (TBS entre sesiones):  12,183
+      R3b (TBC entre ciclos):    296
+      R5 (def. W máximo):        475
+
+[3/4] Resolviendo con Gurobi...
+      Time limit: 600s  |  MIP gap: 1.0%
+-----------------------------------------------------------------
+Gurobi Optimizer version 13.0.1 build v13.0.1rc0 (win64 - Windows 11+.0 (26200.2))
+
+CPU model: AMD Ryzen 5 4600U with Radeon Graphics, instruction set [SSE2|AVX|AVX2]
+Thread count: 6 physical cores, 12 logical processors, using up to 1 threads
+
+Non-default parameters:
+TimeLimit  600
+MIPGap  0.01
+BarHomogeneous  1
+Heuristics  0.8
+MIPFocus  1
+RINS  10
+Cuts  2
+DualReductions  0
+InfUnbdInfo  1
+NumericFocus  3
+Threads  1
+
+Optimize a model with 27478 rows, 203545 columns and 1186996 nonzeros (Min)
+Model fingerprint: 0x89cc6155
+Model has 15806 linear objective coefficients
+Variable types: 476 continuous, 203069 integer (203069 binary)
+Coefficient statistics:
+  Matrix range     [1e+00, 5e+02]
+  Objective range  [1e-01, 1e+02]
+  Bounds range     [1e+00, 1e+02]
+  RHS range        [1e+00, 7e+02]
+
+Presolve removed 323 rows and 5446 columns (presolve time = 5s)...
+Presolve removed 395 rows and 7285 columns
+Presolve time: 7.76s
+Presolved: 27083 rows, 196260 columns, 1125652 nonzeros
+Variable types: 476 continuous, 195784 integer (195784 binary)
+Root relaxation presolved: 27083 rows, 196260 columns, 1125652 nonzeros
+
+
+Root simplex log...
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    9.3000000e+00   2.132050e+04   0.000000e+00     10s
+     436    9.3081929e+00   2.172497e+05   0.000000e+00     10s
+   11876    5.9142108e+01   1.672636e+04   0.000000e+00     15s
+   20456    6.1271834e+01   7.573145e+03   0.000000e+00     20s
+   26066    6.2064535e+01   1.673855e+04   0.000000e+00     25s
+   30741    6.7298598e+01   1.302406e+05   0.000000e+00     30s
+   35966    6.9456922e+01   3.315896e+05   0.000000e+00     35s
+   40641    7.0443473e+01   6.959170e+05   0.000000e+00     40s

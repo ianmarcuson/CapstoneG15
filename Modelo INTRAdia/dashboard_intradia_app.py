@@ -166,6 +166,26 @@ def compute_kpis(f_prog, f_ocup, f_res=None, f_pend=None):
         "unattended": unattended,
     }
 
+def load_confidence_interval_outputs():
+    candidates = [
+        SCRIPT_DIR / "resultados_intradia_30_replicas",
+        SCRIPT_DIR.parent / "Modelo INTRAdia V2" / "resultados_intradia_30_replicas",
+    ]
+    for folder in candidates:
+        summary_path = folder / "kpis_intradia_ic95.csv"
+        replicas_path = folder / "kpis_intradia_replicas.csv"
+        daily_path = folder / "kpis_intradia_daily_ic95.csv"
+        freq_path = folder / "kpis_intradia_most_loaded_day_freq.csv"
+        if summary_path.exists() and replicas_path.exists():
+            return {
+                "folder": folder,
+                "summary": pd.read_csv(summary_path),
+                "replicas": pd.read_csv(replicas_path),
+                "daily": pd.read_csv(daily_path) if daily_path.exists() else pd.DataFrame(),
+                "freq": pd.read_csv(freq_path) if freq_path.exists() else pd.DataFrame(),
+            }
+    return None
+
 def get_critical_days(df_prog, df_ocup):
     if df_prog.empty: return []
     extra_days = df_prog[df_prog["extra_chair_modules"] > 0]["day"].unique()
@@ -562,12 +582,85 @@ def render_datos():
     if show_ocup: st.dataframe(df_ocup, width='stretch')
     if show_res and not df_res.empty: st.dataframe(df_res, width='stretch')
 
+def render_intervalos_confianza():
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("### Intervalos de Confianza de KPIs")
+
+    outputs = load_confidence_interval_outputs()
+    if outputs is None:
+        st.info(
+            "No se encontraron CSV de intervalos. Generelos desde Modelo INTRAdia V2 con: "
+            "`py calcular_ic_intradia_replicas.py --input-dir resultados_intradia_30_replicas`"
+        )
+        return
+
+    df_ic = outputs["summary"].copy()
+    df_rep = outputs["replicas"].copy()
+    df_daily = outputs["daily"].copy()
+    df_freq = outputs["freq"].copy()
+
+    st.caption(f"Fuente: {outputs['folder']}")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Replicas validas", int(df_rep["replica"].nunique()) if "replica" in df_rep.columns else len(df_rep))
+    c2.metric("KPIs resumidos", len(df_ic))
+    c3.metric("Dias con IC diario", int(df_daily["day"].nunique()) if "day" in df_daily.columns and not df_daily.empty else 0)
+
+    st.markdown("#### Resumen por KPI")
+    cols = ["label", "n", "min", "max", "mean", "std", "se", "ci95_low", "ci95_high"]
+    available_cols = [c for c in cols if c in df_ic.columns]
+    st.dataframe(df_ic[available_cols], width='stretch')
+
+    st.markdown("#### Distribucion por replica")
+    visible_cols = [c for c in df_rep.columns if c != "file"]
+    st.dataframe(df_rep[visible_cols], width='stretch')
+
+    if not df_freq.empty:
+        st.markdown("#### Frecuencia del dia mas cargado")
+        st.dataframe(df_freq, width='stretch')
+
+    if not df_daily.empty:
+        st.markdown("#### Intervalos por dia")
+        kpi_options = sorted(df_daily["label"].dropna().unique())
+        selected_kpi = st.selectbox("KPI diario", options=kpi_options)
+        daily_view = df_daily[df_daily["label"] == selected_kpi].copy()
+        if "day" in daily_view.columns:
+            daily_view = daily_view[(daily_view["day"] >= start_d) & (daily_view["day"] <= end_d)]
+        st.dataframe(daily_view, width='stretch')
+
+        if not daily_view.empty:
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=daily_view["day"],
+                y=daily_view["mean"],
+                mode="lines+markers",
+                name="Media",
+                line=dict(color="#10b981"),
+            ))
+            fig.add_trace(go.Scatter(
+                x=daily_view["day"],
+                y=daily_view["ci95_high"],
+                mode="lines",
+                name="IC 95% superior",
+                line=dict(color="#94a3b8", dash="dot"),
+            ))
+            fig.add_trace(go.Scatter(
+                x=daily_view["day"],
+                y=daily_view["ci95_low"],
+                mode="lines",
+                name="IC 95% inferior",
+                fill="tonexty",
+                line=dict(color="#94a3b8", dash="dot"),
+            ))
+            fig.update_layout(plot_bgcolor="rgba(0,0,0,0)", xaxis_title="Dia", yaxis_title=selected_kpi)
+            st.plotly_chart(fig, width='stretch')
+
 # ---------------------------------------------------------
 # 6. ROUTER
 # ---------------------------------------------------------
-tab1, tab_kpi, tab2, tab3 = st.tabs(["📊 Resumen", "🎯 KPIs", "📅 Día Específico", "🗄️ Datos"])
+tab1, tab_kpi, tab_ic, tab2, tab3 = st.tabs(["Resumen", "KPIs", "IC 95%", "Dia Especifico", "Datos"])
 
 with tab1: render_resumen()
 with tab_kpi: render_kpis_view()
+with tab_ic: render_intervalos_confianza()
 with tab2: render_dia_especifico(selected_day)
 with tab3: render_datos()

@@ -1,0 +1,161 @@
+Replica: 15
+Seed: 12360
+Datos: C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Modelo Interdia\resultados_30_replicas\DatosV2-15.xlsx
+Output XLSX: C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Modelo Interdia\resultados_30_replicas\solution_interday-15.xlsx
+
+--- INICIO MODELO ---
+
+=================================================================
+  MODELO INTRADIA - CENTRO ONCOLÓGICO
+=================================================================
+
+[1/4] Cargando datos desde: C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Modelo Interdia\resultados_30_replicas\DatosV2-15.xlsx
+    > Configuración de tipos: 14 tipos de paciente
+    > Horizonte solicitado:   475 días
+    > Días en Motor_Arribos:  730 días
+
+    Centro oncológico:
+      Sillas:              15
+      Módulos ordinarios:  48  →  K = 720
+      Módulos extraordinarios: 8  →  K_ext = 120
+      Módulos farmacia:    20
+      N farmacéuticos:     9  →  Cap. Farmacia = 180
+    > Pacientes generados (total llegadas): 1872
+
+=================================================================
+  ESCENARIO: base
+  ALPHA = 0.1
+  BETA  = 100.0
+  GAMMA = 1.0
+  TimeLimit escenario = 600 segundos
+=================================================================
+
+[2/4] Construyendo modelo Gurobi...
+      Pacientes a programar: 1872
+      Días en horizonte:     475  [1 .. 475]
+      Pacientes descartados por tratamiento fuera de horizonte: 858
+      Pacientes en modelo: 1014
+Set parameter Username
+Set parameter LicenseID to value 2815222
+Academic license - for non-commercial use only - expires 2027-04-29
+Set parameter TimeLimit to value 600
+Set parameter MIPGap to value 0.01
+Set parameter Threads to value 1
+Set parameter DualReductions to value 0
+Set parameter InfUnbdInfo to value 1
+Set parameter BarHomogeneous to value 1
+Set parameter NumericFocus to value 3
+Set parameter MIPFocus to value 1
+Set parameter Heuristics to value 0.8
+Set parameter Cuts to value 2
+Set parameter RINS to value 10
+      Variables binarias: 193,949
+      Variables continuas: 476
+      Agregando restricciones...
+      R1 (unicidad sesiones):    12,961
+      R2 (capacidad diaria):     475
+      R3a (TBS entre sesiones):  11,731
+      R3b (TBC entre ciclos):    216
+      R5 (def. W máximo):        475
+
+[3/4] Resolviendo con Gurobi...
+      Time limit: 600s  |  MIP gap: 1.0%
+-----------------------------------------------------------------
+Gurobi Optimizer version 13.0.1 build v13.0.1rc0 (win64 - Windows 11+.0 (26200.2))
+
+CPU model: AMD Ryzen 5 4600U with Radeon Graphics, instruction set [SSE2|AVX|AVX2]
+Thread count: 6 physical cores, 12 logical processors, using up to 1 threads
+
+Non-default parameters:
+TimeLimit  600
+MIPGap  0.01
+BarHomogeneous  1
+Heuristics  0.8
+MIPFocus  1
+RINS  10
+Cuts  2
+DualReductions  0
+InfUnbdInfo  1
+NumericFocus  3
+Threads  1
+
+Optimize a model with 26333 rows, 194425 columns and 1134656 nonzeros (Min)
+Model fingerprint: 0x3ca8d425
+Model has 14672 linear objective coefficients
+Variable types: 476 continuous, 193949 integer (193949 binary)
+Coefficient statistics:
+  Matrix range     [1e+00, 5e+02]
+  Objective range  [1e-01, 1e+02]
+  Bounds range     [1e+00, 1e+02]
+  RHS range        [1e+00, 7e+02]
+
+Presolve removed 345 rows and 5635 columns
+Presolve time: 4.02s
+Presolved: 25988 rows, 188790 columns, 1077998 nonzeros
+Variable types: 476 continuous, 188314 integer (188314 binary)
+Root relaxation presolved: 25988 rows, 188790 columns, 1077998 nonzeros
+
+
+Root simplex log...
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    6.4000000e+00   2.167456e+04   0.000000e+00      6s
+    8147    5.5223771e+01   1.393014e+05   0.000000e+00     10s
+   16949    5.6717495e+01   7.431077e+04   0.000000e+00     15s
+   22133    5.7537193e+01   5.694748e+04   0.000000e+00     20s
+   26021    5.8369964e+01   3.645840e+04   0.000000e+00     25s
+   31529    5.9112724e+01   4.455028e+04   0.000000e+00     30s
+   39359    5.9903535e+01   6.396169e+04   0.000000e+00     35s
+   45623    6.0791763e+01   1.582295e+04   0.000000e+00     40s
+   50699    6.1632835e+01   1.990320e+04   0.000000e+00     45s
+   55829    6.2005148e+01   1.930641e+04   0.000000e+00     50s
+   60689    6.2657045e+01   1.017568e+04   0.000000e+00     55s
+   66035    6.6211650e+01   2.025967e+03   0.000000e+00     60s
+   70787    8.4400716e+01   8.870394e+00   0.000000e+00     65s
+   70908    8.4440000e+01   0.000000e+00   0.000000e+00     65s
+
+Use crossover to convert LP symmetric solution to basic solution...
+
+Root crossover log...
+
+   20069 DPushes remaining with DInf 0.0000000e+00                65s
+       0 DPushes remaining with DInf 0.0000000e+00                66s
+
+      46 PPushes remaining with PInf 0.0000000e+00                66s
+       0 PPushes remaining with PInf 0.0000000e+00                66s
+
+  Push phase complete: Pinf 0.0000000e+00, Dinf 3.6082248e-16     66s
+
+
+Root simplex log...
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+   75211    8.4440000e+01   0.000000e+00   2.320500e+01     66s
+   75279    8.4440000e+01   0.000000e+00   0.000000e+00     66s
+Crossover time: 0.24 seconds (0.10 work units)
+
+Root relaxation: objective 8.444000e+01, 75279 iterations, 60.71 seconds (22.04 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0   84.44000    0  960          -   84.44000      -     -   66s
+     0     0   84.44000    0  791          -   84.44000      -     -   71s
+H    0     0                     113.7000000   84.44000  25.7%     -   71s
+H    0     0                     110.7000000   84.44000  23.7%     -   71s
+H    0     0                     105.0000000   84.44000  19.6%     -   71s
+H    0     0                     104.9000000   84.44000  19.5%     -   71s
+H    0     0                     104.0000000   84.44000  18.8%     -   71s
+H    0     0                     102.9000000   84.44000  17.9%     -   71s
+H    0     0                     101.9000000   84.44000  17.1%     -   71s
+H    0     0                     101.0000000   84.44000  16.4%     -   73s
+H    0     0                     100.9000000   84.44000  16.3%     -   77s
+H    0     0                     100.8000000   84.44000  16.2%     -   77s
+H    0     0                     100.7000000   85.44000  15.2%     -   78s
+H    0     0                      99.9000000   85.44000  14.5%     -   78s
+H    0     0                      99.8000000   85.44000  14.4%     -   79s
+H    0     0                      99.7000000   85.44000  14.3%     -   79s
+H    0     0                      98.9000000   85.44000  13.6%     -   83s
+     0     2   85.44000    0  789   98.90000   85.44000  13.6%     -   84s
+H    1     1                      98.8000000   85.44000  13.5%   0.0   91s
+     1     3   85.44000    1  789   98.80000   85.44000  13.5%   1.0  102s

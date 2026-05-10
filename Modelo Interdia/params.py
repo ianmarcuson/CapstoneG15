@@ -65,6 +65,12 @@ MIP_GAP            = 0.01    # Gap de optimalidad aceptable (1% - Mínimo viable
 THREADS            = 0       # 0 = usar todos los núcleos disponibles
 LOG_TO_CONSOLE     = True    # Mostrar log de Gurobi en consola
 
+# Corte temprano por estancamiento del MIP gap (callback de Gurobi)
+STALL_SECONDS = 60
+STALL_MIN_RUNTIME = 120
+STALL_MIN_GAP_IMPROVEMENT = 1e-4
+USE_GAP_STALL_CALLBACK = True
+
 # -----------------------------------------------------------------------------
 # CONFIGURACIÓN DE SALIDA
 # -----------------------------------------------------------------------------

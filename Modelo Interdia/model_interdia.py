@@ -28,6 +28,7 @@ Función objetivo:
 
 import sys
 import time
+import math
 import pandas as pd
 import gurobipy as gp
 from gurobipy import GRB
@@ -73,12 +74,18 @@ def extraer_parametros_globales(df_params):
     K = n_sillas * mod_ord          # Capacidad ordinaria total (módulos)
     K_ext = n_sillas * mod_ext       # Capacidad extraordinaria adicional
 
+    mod_farmacia = int(param_dict.get("modulos_farmacia", 20))
+    n_farmaceuticos = int(param_dict.get("n_farmaceuticos", 9))
+    cap_farmacia = mod_farmacia * n_farmaceuticos
+
     print(f"\n    Centro oncológico:")
     print(f"      Sillas:              {n_sillas}")
     print(f"      Módulos ordinarios:  {mod_ord}  →  K = {K}")
     print(f"      Módulos extraordinarios: {mod_ext}  →  K_ext = {K_ext}")
+    print(f"      Módulos farmacia:    {mod_farmacia}")
+    print(f"      N farmacéuticos:     {n_farmaceuticos}  →  Cap. Farmacia = {cap_farmacia}")
 
-    return K, K_ext
+    return K, K_ext, cap_farmacia
 
 
 def construir_tipos(df_config):
@@ -93,6 +100,7 @@ def construir_tipos(df_config):
             "ciclos":   int(row["Ciclos"]),
             "sesiones": int(row["Sesiones"]),
             "modulos":  int(row["Módulos"]),
+            "modulos_farmacia": int(row["Módulos Lab."]) if "Módulos Lab." in row else int(row.get("Modulos Lab.", 0)),
             "TBS":      int(row["TBS"]),
             "TBC":      int(row["TBC"]),
             "duracion": int(row["Duracion (Dias)"]),
@@ -135,6 +143,7 @@ def generar_pacientes(df_arribos, df_bajas, tipos, horizonte_dias, dia_inicio):
                     "ciclos":  config["ciclos"],
                     "sesiones":config["sesiones"],
                     "modulos": config["modulos"],
+                    "modulos_farmacia": config["modulos_farmacia"],
                     "TBS":     config["TBS"],
                     "TBC":     config["TBC"],
                     "duracion":config["duracion"],
@@ -147,7 +156,59 @@ def generar_pacientes(df_arribos, df_bajas, tipos, horizonte_dias, dia_inicio):
 # 2. MODELO DE OPTIMIZACIÓN
 # =============================================================================
 
-def construir_y_resolver(pacientes, K, K_ext, horizonte_dias, dia_inicio,
+def make_gap_stall_callback(stall_seconds=60, min_runtime=120, min_gap_improvement=1e-4):
+    """
+    Crea un callback de Gurobi que corta si el MIP gap se estanca.
+
+    Solo evalua el estancamiento cuando ya existe incumbent factible.
+    """
+    state = {
+        "best_gap": None,
+        "last_improvement_runtime": None,
+        "terminated": False,
+    }
+
+    def gap_stall_callback(model, where):
+        if where != GRB.Callback.MIP or state["terminated"]:
+            return
+
+        runtime = model.cbGet(GRB.Callback.RUNTIME)
+        best_obj = model.cbGet(GRB.Callback.MIP_OBJBST)
+        best_bound = model.cbGet(GRB.Callback.MIP_OBJBND)
+
+        if not math.isfinite(best_obj) or abs(best_obj) >= GRB.INFINITY * 0.5:
+            return
+        if not math.isfinite(best_bound):
+            return
+
+        gap = abs(best_obj - best_bound) / max(abs(best_obj), 1e-10)
+
+        if state["best_gap"] is None:
+            state["best_gap"] = gap
+            state["last_improvement_runtime"] = runtime
+            return
+
+        if gap < state["best_gap"] - min_gap_improvement:
+            state["best_gap"] = gap
+            state["last_improvement_runtime"] = runtime
+            return
+
+        if runtime < min_runtime:
+            return
+
+        elapsed_without_improvement = runtime - state["last_improvement_runtime"]
+        if elapsed_without_improvement >= stall_seconds:
+            state["terminated"] = True
+            print(
+                f"[CALLBACK] Corte por estancamiento: {stall_seconds}s sin mejorar gap. "
+                f"Best gap={state['best_gap']:.6f} runtime={runtime:.1f}s"
+            )
+            model.terminate()
+
+    return gap_stall_callback
+
+
+def construir_y_resolver(pacientes, K, K_ext, cap_farmacia, horizonte_dias, dia_inicio,
                          scenario=None, time_limit_override=None):
     """
     Construye y resuelve el modelo MIP con Gurobi.
@@ -408,6 +469,16 @@ def construir_y_resolver(pacientes, K, K_ext, horizonte_dias, dia_inicio,
         model.addConstr(cap_expr <= W, name=f"r5_W_t{t}")
         n_r5 += 1
 
+        # (R_FARMACIA) Capacidad agregada de farmacia
+        cap_farmacia_expr = gp.quicksum(
+            pac["modulos_farmacia"] * x[pac["id"], t, c, s]
+            for pac in pacientes_validos
+            for c in range(1, pac["ciclos"] + 1)
+            for s in range(1, pac["sesiones"] + 1)
+            if (pac["id"], t, c, s) in x
+        )
+        model.addConstr(cap_farmacia_expr <= cap_farmacia, name=f"r_farmacia_t{t}")
+
     # (R4) Límite de inicio: ya garantizado al no crear x[p,t,c,s] para t < t_min
 
     print(f"      R1 (unicidad sesiones):    {n_r1:,}")
@@ -420,25 +491,33 @@ def construir_y_resolver(pacientes, K, K_ext, horizonte_dias, dia_inicio,
     # Resolver
     # -------------------------------------------------------------------------
     print(f"\n[3/4] Resolviendo con Gurobi...")
-    print(f"      Time limit: {P.TIME_LIMIT_SECONDS}s  |  MIP gap: {P.MIP_GAP*100:.1f}%")
+    print(f"      Time limit: {effective_time_limit}s  |  MIP gap: {P.MIP_GAP*100:.1f}%")
     print("-" * 65)
 
     t_start = time.time()
-    model.optimize()
+    if getattr(P, "USE_GAP_STALL_CALLBACK", False):
+        stall_cb = make_gap_stall_callback(
+            stall_seconds=getattr(P, "STALL_SECONDS", 60),
+            min_runtime=getattr(P, "STALL_MIN_RUNTIME", 120),
+            min_gap_improvement=getattr(P, "STALL_MIN_GAP_IMPROVEMENT", 1e-4),
+        )
+        model.optimize(stall_cb)
+    else:
+        model.optimize()
     t_elapsed = time.time() - t_start
 
     print("-" * 65)
     print(f"      Tiempo de resolución: {t_elapsed:.1f}s")
     print(f"      Status: {model.status} ({_status_str(model.status)})")
 
-    if model.status in (GRB.OPTIMAL, GRB.TIME_LIMIT, GRB.SUBOPTIMAL):
-        if model.SolCount > 0:
-            print(f"      Valor objetivo: {model.ObjVal:.4f}")
-            print(f"      MIP Gap final:  {model.MIPGap * 100:.2f}%")
-            return model, x, y, W, pacientes_validos, dias
-        else:
-            print("      ⚠ No se encontró solución factible dentro del tiempo límite.")
-            return None
+    accepted_statuses = (GRB.OPTIMAL, GRB.TIME_LIMIT, GRB.SUBOPTIMAL, GRB.INTERRUPTED)
+    if model.status in accepted_statuses and model.SolCount > 0:
+        print(f"      Valor objetivo: {model.ObjVal:.4f}")
+        print(f"      MIP Gap final:  {model.MIPGap * 100:.2f}%")
+        return model, x, y, W, pacientes_validos, dias
+    elif model.status in accepted_statuses:
+        print("      No se encontro solucion factible.")
+        return None
     elif model.status == GRB.INFEASIBLE:
         print(f"      ✗ Modelo INFACTIBLE.")
         print(f"      Computando IIS para identificar restricciones conflictivas...")
@@ -462,6 +541,7 @@ def _status_str(status):
         GRB.INFEASIBLE: "INFACTIBLE",
         GRB.TIME_LIMIT: "LÍMITE DE TIEMPO",
         GRB.SUBOPTIMAL: "SUBÓPTIMO",
+        GRB.INTERRUPTED: "INTERRUMPIDO POR CALLBACK",
         GRB.UNBOUNDED:  "NO ACOTADO",
     }
     return mapping.get(status, f"código {status}")
@@ -690,8 +770,10 @@ def exportar_resultados(model, df_schedule, df_resumen, pacientes_validos, dias,
     summary_path = P.OUTPUT_SUMMARY_CSV.replace(".csv", f"{suffix}.csv") if suffix else P.OUTPUT_SUMMARY_CSV
     xlsx_path    = P.OUTPUT_XLSX.replace(".xlsx", f"{suffix}.xlsx") if suffix else P.OUTPUT_XLSX
 
-    df_schedule.to_csv(csv_path, index=False)
-    df_resumen.to_csv(summary_path, index=False)
+    if csv_path:
+        df_schedule.to_csv(csv_path, index=False)
+    if summary_path:
+        df_resumen.to_csv(summary_path, index=False)
 
     df_asignaciones, df_ocupacion, df_resumen_interday = construir_output_interday(
         model, df_schedule, df_resumen, pacientes_validos, dias, K
@@ -713,7 +795,7 @@ def exportar_resultados(model, df_schedule, df_resumen, pacientes_validos, dias,
 # 4. MAIN
 # =============================================================================
 
-def _run_single(pacientes, K, K_ext, scenario=None, suffix="",
+def _run_single(pacientes, K, K_ext, cap_farmacia, scenario=None, suffix="",
                 time_limit_override=None):
     """
     Ejecuta una corrida completa del modelo con los pesos dados.
@@ -766,7 +848,7 @@ def _run_single(pacientes, K, K_ext, scenario=None, suffix="",
 
     try:
         resultado = construir_y_resolver(
-            pacientes, K, K_ext,
+            pacientes, K, K_ext, cap_farmacia,
             horizonte_dias=P.HORIZONTE_DIAS,
             dia_inicio=P.DIA_INICIO,
             scenario=scenario,
@@ -860,7 +942,7 @@ def main():
 
     # --- Cargar datos ---
     df_config, df_params, df_arribos, df_bajas = cargar_datos()
-    K, K_ext = extraer_parametros_globales(df_params)
+    K, K_ext, cap_farmacia = extraer_parametros_globales(df_params)
     tipos = construir_tipos(df_config)
 
     # --- Generar pacientes ---
@@ -874,7 +956,7 @@ def main():
     # --- Modo: una corrida o múltiples escenarios ---
     if not P.RUN_ALL_SCENARIOS:
         # Corrida única con pesos base (comportamiento original)
-        result = _run_single(pacientes, K, K_ext)
+        result = _run_single(pacientes, K, K_ext, cap_farmacia)
         if not result.get("solution_found", False):
             print("\n✗ No se pudo obtener solución. Revise parámetros o amplíe el time limit.")
             sys.exit(1)
@@ -893,7 +975,7 @@ def main():
 
             suffix = f"_{scenario['name']}"
             result = _run_single(
-                pacientes, K, K_ext,
+                pacientes, K, K_ext, cap_farmacia,
                 scenario=scenario,
                 suffix=suffix,
                 time_limit_override=P.SCENARIO_TIME_LIMIT_SECONDS
@@ -939,3 +1021,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
