@@ -4,8 +4,6 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 import os
-import math
-import re
 from pathlib import Path
 
 # Fintual style config
@@ -240,137 +238,149 @@ def load_confidence_interval_outputs():
             }
     return None
 
-def _t_critical_975(df):
-    table = {
-        1: 12.706, 2: 4.303, 3: 3.182, 4: 2.776, 5: 2.571,
-        6: 2.447, 7: 2.365, 8: 2.306, 9: 2.262, 10: 2.228,
-        11: 2.201, 12: 2.179, 13: 2.160, 14: 2.145, 15: 2.131,
-        16: 2.120, 17: 2.110, 18: 2.101, 19: 2.093, 20: 2.086,
-        21: 2.080, 22: 2.074, 23: 2.069, 24: 2.064, 25: 2.060,
-        26: 2.056, 27: 2.052, 28: 2.048, 29: 2.045, 30: 2.042,
-    }
-    if df <= 0:
-        return float("nan")
-    if df in table:
-        return table[df]
-    if df <= 40:
-        return 2.021
-    if df <= 60:
-        return 2.000
-    if df <= 120:
-        return 1.980
-    return 1.960
+def _csv_range_row(kpi, label, values, source="daily_csv"):
+    row = {"kpi": kpi, "label": label, "source": source}
+    row.update(values)
+    return row
 
-def _summarize_values(values):
-    s = pd.Series(list(values), dtype="float64").dropna()
-    n = int(s.size)
-    mean = float(s.mean()) if n else float("nan")
-    std = float(s.std(ddof=1)) if n > 1 else 0.0
-    se = std / math.sqrt(n) if n > 1 else 0.0
-    margin = _t_critical_975(n - 1) * se if n > 1 else 0.0
-    return {
+def _sum_daily_rows(daily_range, daily_kpi, kpi, label):
+    rows = daily_range[daily_range["kpi"] == daily_kpi].copy()
+    if rows.empty:
+        return None
+    n = int(pd.to_numeric(rows["n"], errors="coerce").dropna().min()) if "n" in rows.columns else 0
+    return _csv_range_row(kpi, label, {
         "n": n,
-        "min": float(s.min()) if n else float("nan"),
-        "max": float(s.max()) if n else float("nan"),
-        "mean": mean,
-        "std": std,
-        "se": se,
-        "ci95_low": mean - margin if n else float("nan"),
-        "ci95_high": mean + margin if n else float("nan"),
-    }
+        "min": pd.to_numeric(rows["min"], errors="coerce").sum(),
+        "max": pd.to_numeric(rows["max"], errors="coerce").sum(),
+        "mean": pd.to_numeric(rows["mean"], errors="coerce").sum(),
+        "std": np.nan,
+        "se": np.nan,
+        "ci95_low": pd.to_numeric(rows["ci95_low"], errors="coerce").sum(),
+        "ci95_high": pd.to_numeric(rows["ci95_high"], errors="coerce").sum(),
+    })
 
-def _replica_from_path(path):
-    match = re.search(r"solution_intradia-(\d+)\.xlsx$", path.name)
-    return int(match.group(1)) if match else None
+def _max_daily_rows(daily_range, daily_kpi, kpi, label):
+    rows = daily_range[daily_range["kpi"] == daily_kpi].copy()
+    if rows.empty:
+        return None
+    n = int(pd.to_numeric(rows["n"], errors="coerce").dropna().min()) if "n" in rows.columns else 0
+    return _csv_range_row(kpi, label, {
+        "n": n,
+        "min": pd.to_numeric(rows["min"], errors="coerce").max(),
+        "max": pd.to_numeric(rows["max"], errors="coerce").max(),
+        "mean": pd.to_numeric(rows["mean"], errors="coerce").max(),
+        "std": np.nan,
+        "se": np.nan,
+        "ci95_low": pd.to_numeric(rows["ci95_low"], errors="coerce").max(),
+        "ci95_high": pd.to_numeric(rows["ci95_high"], errors="coerce").max(),
+    })
 
-def _filter_days(df, start_day, end_day):
-    if df is None or df.empty or "day" not in df.columns:
-        return df
-    return df[(df["day"] >= start_day) & (df["day"] <= end_day)].copy()
+def _weighted_avg_daily_rows(daily_range, value_kpi, weight_kpi, kpi, label):
+    value_rows = daily_range[daily_range["kpi"] == value_kpi].copy()
+    weight_rows = daily_range[daily_range["kpi"] == weight_kpi].copy()
+    if value_rows.empty or weight_rows.empty:
+        return None
+    merged = value_rows[["day", "n", "min", "max", "mean", "ci95_low", "ci95_high"]].merge(
+        weight_rows[["day", "mean"]].rename(columns={"mean": "weight_mean"}),
+        on="day",
+        how="inner",
+    )
+    weights = pd.to_numeric(merged["weight_mean"], errors="coerce").fillna(0)
+    total_weight = weights.sum()
+    if total_weight <= 0:
+        return None
 
-def _summarize_kpis_for_range(df_replicas):
-    labels = {
-        "sessions": "Sesiones realizadas",
-        "unique_patients": "Pacientes unicos",
-        "cumplimiento": "Cumplimiento horario regular (%)",
-        "total_extra": "Modulos extra totales",
-        "days_extra": "Dias con extra",
-        "max_wait": "Espera maxima (mod)",
-        "avg_wait": "Espera promedio (mod)",
-        "util_chairs": "Utilizacion sillas total (%)",
-        "util_chairs_reg": "Utilizacion sillas regulares (%)",
-        "util_nurses": "Ocupacion enfermeria (%)",
-        "util_pharm": "Ocupacion farmacia (%)",
-        "postponed_sessions": "Sesiones postponadas",
-        "unattended": "Pacientes no atendidos",
-    }
+    def weighted(col):
+        return (pd.to_numeric(merged[col], errors="coerce").fillna(0) * weights).sum() / total_weight
+
+    n = int(pd.to_numeric(merged["n"], errors="coerce").dropna().min()) if "n" in merged.columns else 0
+    return _csv_range_row(kpi, label, {
+        "n": n,
+        "min": weighted("min"),
+        "max": weighted("max"),
+        "mean": weighted("mean"),
+        "std": np.nan,
+        "se": np.nan,
+        "ci95_low": weighted("ci95_low"),
+        "ci95_high": weighted("ci95_high"),
+    })
+
+def _fallback_global_row(df_ic, kpi, source="global_csv"):
+    if df_ic.empty or "kpi" not in df_ic.columns:
+        return None
+    rows = df_ic[df_ic["kpi"] == kpi].copy()
+    if rows.empty:
+        return None
+    row = rows.iloc[0].to_dict()
+    row["source"] = source
+    return row
+
+def compute_confidence_interval_outputs_from_csv_range(outputs, start_day, end_day):
+    df_ic_global = outputs["summary"].copy()
+    df_rep_global = outputs["replicas"].copy()
+    df_daily_global = outputs["daily"].copy()
+    if df_daily_global.empty or "day" not in df_daily_global.columns:
+        return outputs
+
+    daily_range = df_daily_global[
+        (df_daily_global["day"] >= start_day) & (df_daily_global["day"] <= end_day)
+    ].copy()
+
     rows = []
-    for kpi, label in labels.items():
-        if kpi in df_replicas.columns:
-            row = {"kpi": kpi, "label": label}
-            row.update(_summarize_values(df_replicas[kpi]))
+    for row in [
+        _sum_daily_rows(daily_range, "daily_sessions", "sessions", "Sesiones realizadas"),
+        _sum_daily_rows(daily_range, "daily_unique_patients", "unique_patients", "Pacientes unicos por dia acumulados"),
+        _sum_daily_rows(daily_range, "daily_extra_modules", "total_extra", "Modulos extra totales"),
+        _max_daily_rows(daily_range, "daily_max_wait", "max_wait", "Espera maxima (mod)"),
+        _weighted_avg_daily_rows(daily_range, "daily_avg_wait", "daily_sessions", "avg_wait", "Espera promedio (mod)"),
+    ]:
+        if row is not None:
             rows.append(row)
-    return pd.DataFrame(rows)
 
-@st.cache_data(show_spinner=False)
-def compute_confidence_interval_outputs_for_range(folder_str, start_day, end_day):
-    folder = Path(folder_str)
-    files = sorted(folder.glob("solution_intradia-*.xlsx"), key=lambda p: _replica_from_path(p) or 10**9)
-    replica_rows = []
-    daily_rows = []
+    extra_rows = daily_range[daily_range["kpi"] == "daily_extra_modules"].copy()
+    if not extra_rows.empty:
+        extra_mean = pd.to_numeric(extra_rows["mean"], errors="coerce").fillna(0)
+        rows.append(_csv_range_row("days_extra", "Dias con extra", {
+            "n": int(pd.to_numeric(extra_rows["n"], errors="coerce").dropna().min()),
+            "min": int((pd.to_numeric(extra_rows["max"], errors="coerce").fillna(0) > 0).sum()),
+            "max": int((pd.to_numeric(extra_rows["max"], errors="coerce").fillna(0) > 0).sum()),
+            "mean": int((extra_mean > 0).sum()),
+            "std": np.nan,
+            "se": np.nan,
+            "ci95_low": np.nan,
+            "ci95_high": np.nan,
+        }))
 
-    for path in files:
-        replica = _replica_from_path(path)
-        if replica is None:
-            continue
-        df_res_i, df_prog_i, df_ocup_i, df_pend_i = load_data(str(path))
-        if df_prog_i is None or df_prog_i.empty:
-            continue
-
-        df_res_i = _filter_days(df_res_i, start_day, end_day)
-        df_prog_i = _filter_days(df_prog_i, start_day, end_day)
-        df_ocup_i = _filter_days(df_ocup_i, start_day, end_day)
-        if df_prog_i.empty:
-            continue
-
-        row = {"replica": replica, "file": str(path), "start_day": start_day, "end_day": end_day}
-        row.update(compute_kpis(df_prog_i, df_ocup_i, df_res_i, df_pend_i))
-        replica_rows.append(row)
-
-        daily = compute_daily_kpis(df_prog_i, df_ocup_i)
-        if not daily.empty:
-            daily["replica"] = replica
-            daily_rows.extend(daily.to_dict("records"))
-
-    df_replicas = pd.DataFrame(replica_rows).sort_values("replica") if replica_rows else pd.DataFrame()
-    df_ic = _summarize_kpis_for_range(df_replicas) if not df_replicas.empty else pd.DataFrame()
-
-    df_daily = pd.DataFrame(daily_rows)
-    daily_summary_rows = []
-    if not df_daily.empty:
-        for day, day_df in df_daily.groupby("day"):
-            for kpi, label in DAILY_KPI_LABELS.items():
-                if kpi not in day_df.columns:
-                    continue
-                row = {"day": int(day), "kpi": kpi, "label": label}
-                row.update(_summarize_values(day_df[kpi]))
-                daily_summary_rows.append(row)
-    df_daily_ic = pd.DataFrame(daily_summary_rows)
-
+    treatment_rows = daily_range[daily_range["kpi"] == "daily_treatment_modules"].copy()
     freq = pd.DataFrame()
-    if not df_replicas.empty and "most_loaded_day" in df_replicas.columns:
-        freq = (
-            df_replicas["most_loaded_day"]
-            .dropna()
-            .astype(int)
-            .value_counts()
-            .rename_axis("day")
-            .reset_index(name="count")
-        )
-        freq["pct"] = freq["count"] / len(df_replicas) * 100
-        freq = freq.sort_values(["count", "day"], ascending=[False, True])
+    if not treatment_rows.empty:
+        treatment_rows["mean_num"] = pd.to_numeric(treatment_rows["mean"], errors="coerce")
+        top = treatment_rows.sort_values(["mean_num", "day"], ascending=[False, True]).iloc[0]
+        rows.append(_csv_range_row("most_loaded_day", "Dia mas cargado", {
+            "n": int(top["n"]) if "n" in top and not pd.isna(top["n"]) else 0,
+            "min": top["day"],
+            "max": top["day"],
+            "mean": top["day"],
+            "std": np.nan,
+            "se": np.nan,
+            "ci95_low": np.nan,
+            "ci95_high": np.nan,
+        }, source="daily_csv_peak"))
+        freq = treatment_rows[["day", "mean_num"]].rename(columns={"mean_num": "mean_treatment_modules"})
+        freq = freq.sort_values(["mean_treatment_modules", "day"], ascending=[False, True])
 
-    return {"summary": df_ic, "replicas": df_replicas, "daily": df_daily_ic, "freq": freq}
+    for kpi in ["cumplimiento", "util_chairs", "util_chairs_reg", "util_nurses", "util_pharm", "postponed_sessions", "unattended"]:
+        row = _fallback_global_row(df_ic_global, kpi)
+        if row is not None:
+            rows.append(row)
+
+    return {
+        "folder": outputs["folder"],
+        "summary": pd.DataFrame(rows),
+        "replicas": df_rep_global,
+        "daily": daily_range,
+        "freq": freq,
+    }
 
 def get_critical_days(df_prog, df_ocup):
     if df_prog.empty: return []
@@ -780,40 +790,30 @@ def render_intervalos_confianza():
         )
         return
 
-    range_outputs = None
-    replica_files = list(Path(outputs["folder"]).glob("solution_intradia-*.xlsx"))
-    if replica_files:
-        range_outputs = compute_confidence_interval_outputs_for_range(str(outputs["folder"]), int(start_d), int(end_d))
-
-    active_outputs = range_outputs if range_outputs is not None and not range_outputs["replicas"].empty else outputs
+    active_outputs = compute_confidence_interval_outputs_from_csv_range(outputs, int(start_d), int(end_d))
     df_ic = active_outputs["summary"].copy()
     df_rep = active_outputs["replicas"].copy()
     df_daily = active_outputs["daily"].copy()
     df_freq = active_outputs["freq"].copy()
 
-    if range_outputs is not None and not range_outputs["replicas"].empty:
-        st.caption(f"Fuente: {outputs['folder']} | KPIs recalculados para dias {start_d}-{end_d}")
-    else:
-        st.caption(f"Fuente: {outputs['folder']} | CSV globales sin recalculo por rango")
+    st.caption(f"Fuente: {outputs['folder']} | KPIs filtrados desde CSV para dias {start_d}-{end_d}")
     c1, c2, c3 = st.columns(3)
     c1.metric("Replicas validas", int(df_rep["replica"].nunique()) if "replica" in df_rep.columns else len(df_rep))
     c2.metric("KPIs resumidos", len(df_ic))
     c3.metric("Dias con IC diario", int(df_daily["day"].nunique()) if "day" in df_daily.columns and not df_daily.empty else 0)
 
     def _summary_row(kpi):
-        if kpi == "most_loaded_day" and not df_freq.empty and "day" in df_freq.columns:
-            values = pd.to_numeric(df_rep.get("most_loaded_day", pd.Series(dtype=float)), errors="coerce").dropna()
-            return pd.Series({
-                "mean": float(df_freq.iloc[0]["day"]),
-                "min": values.min() if not values.empty else np.nan,
-                "max": values.max() if not values.empty else np.nan,
-                "n": len(values),
-                "count": df_freq.iloc[0].get("count", np.nan),
-                "pct": df_freq.iloc[0].get("pct", np.nan),
-            })
         row = df_ic[df_ic["kpi"] == kpi] if "kpi" in df_ic.columns else pd.DataFrame()
         if not row.empty:
             return row.iloc[0]
+        if kpi == "most_loaded_day" and not df_freq.empty and "day" in df_freq.columns:
+            return pd.Series({
+                "mean": float(df_freq.iloc[0]["day"]),
+                "min": float(df_freq.iloc[0]["day"]),
+                "max": float(df_freq.iloc[0]["day"]),
+                "n": int(df_rep["replica"].nunique()) if "replica" in df_rep.columns else len(df_rep),
+                "source": "daily_csv_peak",
+            })
         if kpi in df_rep.columns:
             values = pd.to_numeric(df_rep[kpi], errors="coerce").dropna()
             if not values.empty:
@@ -842,14 +842,15 @@ def render_intervalos_confianza():
         min_v = row.get("min", np.nan)
         max_v = row.get("max", np.nan)
         n = int(row.get("n", 0)) if not pd.isna(row.get("n", np.nan)) else len(df_rep)
+        source = row.get("source", "csv")
         with col:
             st.metric(label, _format_kpi(mean, is_percent, is_mod, is_day))
-            if kpi == "most_loaded_day" and "count" in row:
+            if kpi == "most_loaded_day" and source == "daily_csv_peak":
                 st.caption(
-                    f"Mas frecuente en {int(row.get('count', 0))}/{n} sim. "
-                    f"({float(row.get('pct', 0)):.1f}%) | Min: {_format_kpi(min_v, is_percent, is_mod, is_day)} | "
-                    f"Max: {_format_kpi(max_v, is_percent, is_mod, is_day)}"
+                    "Mayor carga media diaria dentro del rango seleccionado."
                 )
+            elif source == "global_csv":
+                st.caption("CSV global: no derivable exactamente por rango con los CSV actuales.")
             else:
                 st.caption(
                     f"Promedio {n} sim. | Min: {_format_kpi(min_v, is_percent, is_mod, is_day)} | "
@@ -858,7 +859,7 @@ def render_intervalos_confianza():
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("### Indicadores de Desempeno Operacional (KPIs)")
-    st.markdown("Promedio, minimo y maximo observados en las replicas disponibles para el periodo seleccionado.")
+    st.markdown("Indicadores derivados desde los CSV globales filtrando el periodo seleccionado.")
     st.markdown("<br>", unsafe_allow_html=True)
 
     st.markdown("##### 1. Demanda y Flujo")
@@ -900,7 +901,7 @@ def render_intervalos_confianza():
     st.markdown("### Tablas de detalle")
 
     st.markdown("#### Resumen por KPI")
-    cols = ["label", "n", "min", "max", "mean", "std", "se", "ci95_low", "ci95_high"]
+    cols = ["label", "source", "n", "min", "max", "mean", "std", "se", "ci95_low", "ci95_high"]
     available_cols = [c for c in cols if c in df_ic.columns]
     st.dataframe(df_ic[available_cols], width='stretch')
 
