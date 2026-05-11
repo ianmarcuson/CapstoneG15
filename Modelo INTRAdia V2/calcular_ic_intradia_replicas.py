@@ -210,6 +210,8 @@ def compute_daily_kpis(replica: int, df_prog: pd.DataFrame, df_ocup: pd.DataFram
     for day in days:
         day_prog = df_prog[df_prog["day"] == day]
         day_ocup = df_ocup[df_ocup["day"] == day]
+        reg_ocup = day_ocup[day_ocup["is_extra"] == 0] if not day_ocup.empty and "is_extra" in day_ocup.columns else pd.DataFrame()
+        pharm_ops = day_ocup[day_ocup["module"] <= 20] if not day_ocup.empty and "module" in day_ocup.columns else pd.DataFrame()
         if "nurse_events" in day_ocup.columns:
             nurse_series = day_ocup["nurse_events"]
         elif "nurse_starts" in day_ocup.columns and "nurse_ends" in day_ocup.columns:
@@ -225,6 +227,7 @@ def compute_daily_kpis(replica: int, df_prog: pd.DataFrame, df_ocup: pd.DataFram
                 "day": int(day),
                 "daily_sessions": int(len(day_prog)),
                 "daily_unique_patients": int(day_prog["patient_id"].nunique()) if not day_prog.empty else 0,
+                "daily_patient_ids": "|".join(map(str, sorted(day_prog["patient_id"].dropna().unique()))) if not day_prog.empty else "",
                 "daily_treatment_modules": float(day_prog["treatment_modules"].sum()) if not day_prog.empty else 0.0,
                 "daily_extra_modules": float(day_prog["extra_chair_modules"].sum()) if not day_prog.empty else 0.0,
                 "daily_avg_wait": float(day_prog["treatment_start"].mean()) if not day_prog.empty else 0.0,
@@ -232,6 +235,15 @@ def compute_daily_kpis(replica: int, df_prog: pd.DataFrame, df_ocup: pd.DataFram
                 "daily_peak_chairs": float(day_ocup["chairs_used"].max()) if not day_ocup.empty else 0.0,
                 "daily_peak_nurses": float(nurse_series.max()) if not nurse_series.empty else 0.0,
                 "daily_peak_pharmacy": float(day_ocup["pharmacy_used"].max()) if not day_ocup.empty else 0.0,
+                "daily_ontime_sessions": int((day_prog["treatment_end"] <= 47).sum()) if not day_prog.empty else 0,
+                "daily_chairs_used_sum": float(day_ocup["chairs_used"].sum()) if not day_ocup.empty else 0.0,
+                "daily_chairs_capacity_sum": float(day_ocup["chair_capacity"].sum()) if not day_ocup.empty else 0.0,
+                "daily_chairs_reg_used_sum": float(reg_ocup["chairs_used"].sum()) if not reg_ocup.empty else 0.0,
+                "daily_chairs_reg_capacity_sum": float(reg_ocup["chair_capacity"].sum()) if not reg_ocup.empty else 0.0,
+                "daily_nurse_used_sum": float(nurse_series.sum()) if not nurse_series.empty else 0.0,
+                "daily_nurse_capacity_sum": float(day_ocup["nurse_capacity"].sum()) if not day_ocup.empty else 0.0,
+                "daily_pharmacy_used_0_20_sum": float(pharm_ops["pharmacy_used"].sum()) if not pharm_ops.empty else 0.0,
+                "daily_pharmacy_capacity_0_20_sum": float(pharm_ops["pharmacy_capacity"].sum()) if not pharm_ops.empty else 0.0,
             }
         )
     return rows
@@ -352,6 +364,7 @@ def main() -> None:
 
     df_replicas.to_csv(output_dir / "kpis_intradia_replicas.csv", index=False)
     df_ic.to_csv(output_dir / "kpis_intradia_ic95.csv", index=False)
+    df_daily.to_csv(output_dir / "kpis_intradia_daily_replicas.csv", index=False)
     df_daily_ic.to_csv(output_dir / "kpis_intradia_daily_ic95.csv", index=False)
     freq.to_csv(output_dir / "kpis_intradia_most_loaded_day_freq.csv", index=False)
     if errors:
@@ -361,6 +374,7 @@ def main() -> None:
     print(f"CSV generados en: {output_dir}")
     print("  - kpis_intradia_replicas.csv")
     print("  - kpis_intradia_ic95.csv")
+    print("  - kpis_intradia_daily_replicas.csv")
     print("  - kpis_intradia_daily_ic95.csv")
     print("  - kpis_intradia_most_loaded_day_freq.csv")
     if errors:

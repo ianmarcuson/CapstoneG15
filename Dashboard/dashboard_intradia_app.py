@@ -227,6 +227,7 @@ def load_confidence_interval_outputs():
         summary_path = folder / "kpis_intradia_ic95.csv"
         replicas_path = folder / "kpis_intradia_replicas.csv"
         daily_path = folder / "kpis_intradia_daily_ic95.csv"
+        daily_replicas_path = folder / "kpis_intradia_daily_replicas.csv"
         freq_path = folder / "kpis_intradia_most_loaded_day_freq.csv"
         if summary_path.exists() and replicas_path.exists():
             return {
@@ -234,6 +235,7 @@ def load_confidence_interval_outputs():
                 "summary": pd.read_csv(summary_path),
                 "replicas": pd.read_csv(replicas_path),
                 "daily": pd.read_csv(daily_path) if daily_path.exists() else pd.DataFrame(),
+                "daily_replicas": pd.read_csv(daily_replicas_path) if daily_replicas_path.exists() else pd.DataFrame(),
                 "freq": pd.read_csv(freq_path) if freq_path.exists() else pd.DataFrame(),
             }
     return None
@@ -315,7 +317,162 @@ def _fallback_global_row(df_ic, kpi, source="global_csv"):
     row["source"] = source
     return row
 
+def _summarize_replica_range(df_range, kpi, label, values, source="daily_replicas_csv"):
+    row = {"kpi": kpi, "label": label, "source": source}
+    row.update(values)
+    return row
+
+def _ratio(num, den):
+    return np.where(den > 0, num / den * 100, np.nan)
+
+def _unique_patient_count_from_ids(series):
+    patient_ids = set()
+    for value in series.dropna():
+        for patient_id in str(value).split("|"):
+            if patient_id:
+                patient_ids.add(patient_id)
+    return len(patient_ids)
+
+def _range_outputs_from_daily_replicas(outputs, start_day, end_day):
+    df_daily_replicas = outputs.get("daily_replicas", pd.DataFrame()).copy()
+    if df_daily_replicas.empty or "day" not in df_daily_replicas.columns or "replica" not in df_daily_replicas.columns:
+        return None
+
+    df_range = df_daily_replicas[
+        (df_daily_replicas["day"] >= start_day) & (df_daily_replicas["day"] <= end_day)
+    ].copy()
+    if df_range.empty:
+        return None
+
+    grouped = df_range.groupby("replica", as_index=False).agg(
+        sessions=("daily_sessions", "sum"),
+        unique_patients=("daily_unique_patients", "sum"),
+        ontime_sessions=("daily_ontime_sessions", "sum"),
+        total_extra=("daily_extra_modules", "sum"),
+        days_extra=("daily_extra_modules", lambda s: int((pd.to_numeric(s, errors="coerce").fillna(0) > 0).sum())),
+        max_wait=("daily_max_wait", "max"),
+        treatment_modules=("daily_treatment_modules", "sum"),
+        chairs_used_sum=("daily_chairs_used_sum", "sum"),
+        chairs_capacity_sum=("daily_chairs_capacity_sum", "sum"),
+        chairs_reg_used_sum=("daily_chairs_reg_used_sum", "sum"),
+        chairs_reg_capacity_sum=("daily_chairs_reg_capacity_sum", "sum"),
+        nurse_used_sum=("daily_nurse_used_sum", "sum"),
+        nurse_capacity_sum=("daily_nurse_capacity_sum", "sum"),
+        pharmacy_used_0_20_sum=("daily_pharmacy_used_0_20_sum", "sum"),
+        pharmacy_capacity_0_20_sum=("daily_pharmacy_capacity_0_20_sum", "sum"),
+    )
+    if "daily_patient_ids" in df_range.columns:
+        unique_patients = (
+            df_range.groupby("replica")["daily_patient_ids"]
+            .apply(_unique_patient_count_from_ids)
+            .rename("unique_patients_exact")
+            .reset_index()
+        )
+        grouped = grouped.merge(unique_patients, on="replica", how="left")
+        grouped["unique_patients"] = grouped["unique_patients_exact"].fillna(grouped["unique_patients"])
+
+    wait_weight = (
+        pd.to_numeric(df_range["daily_avg_wait"], errors="coerce").fillna(0)
+        * pd.to_numeric(df_range["daily_sessions"], errors="coerce").fillna(0)
+    )
+    wait_by_replica = wait_weight.groupby(df_range["replica"]).sum()
+    sessions_by_replica = pd.to_numeric(grouped["sessions"], errors="coerce").replace(0, np.nan)
+    grouped["avg_wait"] = grouped["replica"].map(wait_by_replica) / sessions_by_replica
+    grouped["cumplimiento"] = _ratio(grouped["ontime_sessions"], grouped["sessions"])
+    grouped["util_chairs"] = _ratio(grouped["chairs_used_sum"], grouped["chairs_capacity_sum"])
+    grouped["util_chairs_reg"] = _ratio(grouped["chairs_reg_used_sum"], grouped["chairs_reg_capacity_sum"])
+    grouped["util_nurses"] = _ratio(grouped["nurse_used_sum"], grouped["nurse_capacity_sum"])
+    grouped["util_pharm"] = _ratio(grouped["pharmacy_used_0_20_sum"], grouped["pharmacy_capacity_0_20_sum"])
+
+    most_loaded = (
+        df_range.sort_values(["replica", "daily_treatment_modules", "day"], ascending=[True, False, True])
+        .groupby("replica", as_index=False)
+        .first()[["replica", "day"]]
+        .rename(columns={"day": "most_loaded_day"})
+    )
+    grouped = grouped.merge(most_loaded, on="replica", how="left")
+
+    df_ic_global = outputs["summary"].copy()
+    rows = []
+    labels = {
+        "sessions": "Sesiones realizadas",
+        "unique_patients": "Pacientes unicos por dia acumulados",
+        "cumplimiento": "Cumplimiento horario regular (%)",
+        "total_extra": "Modulos extra totales",
+        "days_extra": "Dias con extra",
+        "max_wait": "Espera maxima (mod)",
+        "avg_wait": "Espera promedio (mod)",
+        "util_chairs": "Utilizacion sillas total (%)",
+        "util_chairs_reg": "Utilizacion sillas regulares (%)",
+        "util_nurses": "Ocupacion enfermeria (%)",
+        "util_pharm": "Ocupacion farmacia (%)",
+    }
+    for kpi, label in labels.items():
+        row = _summarize_replica_range(grouped, kpi, label, _summarize_values_for_dashboard(grouped[kpi]))
+        rows.append(row)
+
+    freq = (
+        grouped["most_loaded_day"]
+        .dropna()
+        .astype(int)
+        .value_counts()
+        .rename_axis("day")
+        .reset_index(name="count")
+    )
+    if not freq.empty:
+        freq["pct"] = freq["count"] / len(grouped) * 100
+        freq = freq.sort_values(["count", "day"], ascending=[False, True])
+        top_day = int(freq.iloc[0]["day"])
+        rows.append(_summarize_replica_range(grouped, "most_loaded_day", "Dia mas cargado", {
+            "n": int(grouped["most_loaded_day"].notna().sum()),
+            "min": float(grouped["most_loaded_day"].min()),
+            "max": float(grouped["most_loaded_day"].max()),
+            "mean": float(top_day),
+            "std": np.nan,
+            "se": np.nan,
+            "ci95_low": np.nan,
+            "ci95_high": np.nan,
+        }, source="daily_replicas_mode"))
+
+    for kpi in ["postponed_sessions", "unattended"]:
+        row = _fallback_global_row(df_ic_global, kpi)
+        if row is not None:
+            rows.append(row)
+
+    return {
+        "folder": outputs["folder"],
+        "summary": pd.DataFrame(rows),
+        "replicas": grouped,
+        "daily": outputs["daily"][
+            (outputs["daily"]["day"] >= start_day) & (outputs["daily"]["day"] <= end_day)
+        ].copy() if not outputs["daily"].empty and "day" in outputs["daily"].columns else pd.DataFrame(),
+        "freq": freq,
+    }
+
+def _summarize_values_for_dashboard(values):
+    s = pd.to_numeric(pd.Series(values), errors="coerce").dropna()
+    n = int(s.size)
+    mean = float(s.mean()) if n else float("nan")
+    std = float(s.std(ddof=1)) if n > 1 else 0.0
+    se = std / np.sqrt(n) if n > 1 else 0.0
+    t_975_29 = 2.045 if n == 30 else 1.96
+    margin = t_975_29 * se if n > 1 else 0.0
+    return {
+        "n": n,
+        "min": float(s.min()) if n else float("nan"),
+        "max": float(s.max()) if n else float("nan"),
+        "mean": mean,
+        "std": std,
+        "se": se,
+        "ci95_low": mean - margin if n else float("nan"),
+        "ci95_high": mean + margin if n else float("nan"),
+    }
+
 def compute_confidence_interval_outputs_from_csv_range(outputs, start_day, end_day):
+    replica_outputs = _range_outputs_from_daily_replicas(outputs, start_day, end_day)
+    if replica_outputs is not None:
+        return replica_outputs
+
     df_ic_global = outputs["summary"].copy()
     df_rep_global = outputs["replicas"].copy()
     df_daily_global = outputs["daily"].copy()
@@ -849,6 +1006,9 @@ def render_intervalos_confianza():
                 st.caption(
                     "Mayor carga media diaria dentro del rango seleccionado."
                 )
+            elif kpi == "most_loaded_day" and source == "daily_replicas_mode" and not df_freq.empty:
+                top = df_freq.iloc[0]
+                st.caption(f"Mas frecuente en {int(top['count'])}/{n} sim. ({float(top['pct']):.1f}%).")
             elif source == "global_csv":
                 st.caption("CSV global: no derivable exactamente por rango con los CSV actuales.")
             else:
