@@ -1,0 +1,231 @@
+Replica: 18
+Seed: 12363
+Datos: /Users/beatrizorchard/Desktop/Capstone/CapstoneG15/Modelo Interdia Farmacia Anticipada H450/resultados_farmacia_anticipada_h450/DatosV2-18.xlsx
+Output XLSX: /Users/beatrizorchard/Desktop/Capstone/CapstoneG15/Modelo Interdia Farmacia Anticipada H450/resultados_farmacia_anticipada_h450/solution_interday_farmacia_anticipada_h450-18.xlsx
+Modelo: interdia Farmacia Anticipada H450 (prep t-1)
+
+--- INICIO MODELO FARMACIA ANTICIPADA ---
+
+=================================================================
+  MODELO INTRADIA - CENTRO ONCOLÓGICO
+=================================================================
+
+[1/4] Cargando datos desde: /Users/beatrizorchard/Desktop/Capstone/CapstoneG15/Modelo Interdia Farmacia Anticipada H450/resultados_farmacia_anticipada_h450/DatosV2-18.xlsx
+    > Configuración de tipos: 14 tipos de paciente
+    > Horizonte solicitado:   450 días
+    > Días en Motor_Arribos:  730 días
+
+    Centro oncológico:
+      Sillas:              15
+      Módulos ordinarios:  48  →  K = 720
+      Módulos extraordinarios: 8  →  K_ext = 120
+      Módulos farmacia:    20
+      N farmacéuticos:     9  →  Cap. Farmacia = 180
+    > Pacientes generados (total llegadas): 1873
+
+=================================================================
+  ESCENARIO: base
+  ALPHA = 0.1
+  BETA  = 100.0
+  GAMMA = 1.0
+  TimeLimit escenario = 1000 segundos
+=================================================================
+
+[2/4] Construyendo modelo Gurobi...
+      Pacientes a programar: 1873
+      Días en horizonte:     450  [1 .. 450]
+      Pacientes descartados por tratamiento fuera de horizonte: 924
+      Pacientes en modelo: 949
+Set parameter Username
+Academic license - for non-commercial use only - expires 2027-04-28
+Set parameter TimeLimit to value 1000
+Set parameter MIPGap to value 0.01
+Set parameter Threads to value 4
+Set parameter DualReductions to value 0
+Set parameter InfUnbdInfo to value 1
+Set parameter BarHomogeneous to value 1
+Set parameter NumericFocus to value 3
+Set parameter MIPFocus to value 1
+Set parameter Heuristics to value 0.8
+Set parameter Cuts to value 2
+Set parameter RINS to value 10
+      Variables binarias x:    160,933
+      Variables binarias prep: 321,863
+      Variables continuas: 451
+      Agregando restricciones...
+      R1 (unicidad sesiones):    10,757
+      R2 (capacidad diaria):     450
+      R3a (TBS entre sesiones):  9,656
+      R3b (TBC entre ciclos):    152
+      R5 (def. W máximo):        450
+      Rprep (link farmacia):     160,933
+      Rfarm (cap. farmacia):     450
+
+[3/4] Resolviendo con Gurobi...
+      Time limit: 1000s  |  MIP gap: 1.0%
+-----------------------------------------------------------------
+Gurobi Optimizer version 10.0.3 build v10.0.3rc0 (mac64[arm])
+
+CPU model: Apple M3
+Thread count: 8 physical cores, 8 logical processors, using up to 4 threads
+
+Optimize a model with 182848 rows, 483247 columns and 1582176 nonzeros
+Model fingerprint: 0xdec91e6a
+Variable types: 451 continuous, 482796 integer (482796 binary)
+Coefficient statistics:
+  Matrix range     [1e+00, 4e+02]
+  Objective range  [1e-01, 1e+02]
+  Bounds range     [1e+00, 1e+02]
+  RHS range        [1e+00, 7e+02]
+Presolve removed 16513 rows and 27416 columns
+Presolve time: 3.03s
+Presolved: 166335 rows, 455831 columns, 1507531 nonzeros
+Variable types: 451 continuous, 455380 integer (455380 binary)
+Found heuristic solution: objective 1272.8000000
+Root relaxation presolved: 166335 rows, 455831 columns, 1507531 nonzeros
+
+Deterministic concurrent LP optimizer: primal simplex, dual simplex, and barrier
+Showing barrier log only...
+
+Root barrier log...
+
+Ordering time: 0.58s
+
+Barrier statistics:
+ Dense cols : 1
+ AA' NZ     : 1.465e+06
+ Factor NZ  : 4.471e+06 (roughly 240 MB of memory)
+ Factor Ops : 2.039e+09 (less than 1 second per iteration)
+ Threads    : 2
+
+                  Objective                Residual
+Iter       Primal          Dual         Primal    Dual     Compl     Time
+   0   3.90123960e+08 -2.61243996e+08  4.24e+05 0.00e+00  7.86e+05     5s
+   1   1.88810590e+08 -2.92769223e+08  1.94e+05 9.15e+01  3.64e+05     5s
+   2   3.01623017e+07 -2.99427515e+08  3.04e+04 1.54e+01  5.80e+04     5s
+   3   3.62003392e+06 -2.84273748e+08  3.51e+03 9.95e-01  6.95e+03     6s
+
+Barrier performed 3 iterations in 5.64 seconds (13.09 work units)
+Barrier solve interrupted - model solved by another algorithm
+
+Concurrent spin time: 1.11s (can be avoided by choosing Method=3)
+
+Solved with primal simplex
+
+Root simplex log...
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+    5337    7.0900000e+01   0.000000e+00   0.000000e+00      6s
+
+Use crossover to convert LP symmetric solution to basic solution...
+
+Root crossover log...
+
+   30395 DPushes remaining with DInf 0.0000000e+00                 6s
+       0 DPushes remaining with DInf 0.0000000e+00                 6s
+
+     143 PPushes remaining with PInf 0.0000000e+00                 6s
+       0 PPushes remaining with PInf 0.0000000e+00                 6s
+
+  Push phase complete: Pinf 0.0000000e+00, Dinf 2.7200464e-15      6s
+
+
+Root simplex log...
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+    9235    7.0900000e+01   0.000000e+00   0.000000e+00      6s
+
+Root relaxation: objective 7.090000e+01, 9235 iterations, 2.55 seconds (5.60 work units)
+Total elapsed time = 11.54s
+Total elapsed time = 16.18s
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0   70.90000    0  463 1272.80000   70.90000  94.4%     -   18s
+H    0     0                      71.7000000   70.90000  1.12%     -   18s
+H    0     0                      71.6000000   70.90000  0.98%     -   19s
+
+Explored 1 nodes (87652 simplex iterations) in 19.66 seconds (82.30 work units)
+Thread count was 4 (of 8 available processors)
+
+Solution count 3: 71.6 71.7 1272.8 
+
+Optimal solution found (tolerance 1.00e-02)
+Best objective 7.160000000000e+01, best bound 7.090000000000e+01, gap 0.9777%
+-----------------------------------------------------------------
+      Tiempo de resolución: 19.7s
+      Status: 2 (ÓPTIMO)
+      Valor objetivo: 71.6000
+      MIP Gap final:  0.98%
+
+[4/4] Extrayendo resultados...
+      > Validación capacidad total: ninguna jornada supera 840 módulos.
+      W del modelo: 696.0  |  Máx. ocupación real: 696.0  |  Diferencia: -0.00
+
+=================================================================
+  RESUMEN DE RESULTADOS
+=================================================================
+  Horizonte:               450 días (día 1 .. 450)
+  MAX_ESPERA:              14 días
+  MIP_GAP solicitado:      1.0%
+  TimeLimit:               1000s
+  Capacidad: K=720  K_ext=120  Total=840
+
+  Estado del solver:       ÓPTIMO
+  Valor objetivo (z):      71.6000
+  MIP Gap final:           0.98%
+  W del modelo:            696.0 módulos  (96.7% de K  |  82.9% de cap. total)
+
+  Máxima ocupación real:   696 módulos (cap. máx.=840)
+  Ocupación promedio:      374.8 módulos  (44.6% de cap. total)
+  Día de mayor ocupación:  día 211  (696 módulos)
+  Días con módulos extra:  0  (total extra: 0 mód-día  |  max en un día: 0/120)
+  Días con holgura activa: 0  (total: 0.0 módulos-día)
+
+  Pacientes programados:   949
+  Total sesiones agendadas: 10,757
+  Espera promedio (1ª ses):    0.0 días  [ciclo=1, sesion=1]
+  Espera máxima (1ª ses):      1 días  [ciclo=1, sesion=1]
+
+  Sesiones por tipo de paciente:
+    Tipo  2:    17 pacientes  |     204 sesiones  |      1632 módulos totales
+    Tipo  3:    73 pacientes  |    1752 sesiones  |     28032 módulos totales
+    Tipo  4:   114 pacientes  |     684 sesiones  |     17100 módulos totales
+    Tipo  5:    50 pacientes  |    1200 sesiones  |     19200 módulos totales
+    Tipo  6:    26 pacientes  |     390 sesiones  |      7800 módulos totales
+    Tipo  7:   291 pacientes  |    1164 sesiones  |     16296 módulos totales
+    Tipo  8:    89 pacientes  |     445 sesiones  |      6675 módulos totales
+    Tipo  9:    19 pacientes  |     855 sesiones  |     12825 módulos totales
+    Tipo 10:   127 pacientes  |    3048 sesiones  |     48768 módulos totales
+    Tipo 11:    55 pacientes  |     275 sesiones  |      2200 módulos totales
+    Tipo 12:    31 pacientes  |     124 sesiones  |      1984 módulos totales
+    Tipo 13:    17 pacientes  |     136 sesiones  |      1360 módulos totales
+    Tipo 14:    40 pacientes  |     480 sesiones  |      4800 módulos totales
+=================================================================
+
+  > Schedule exportado a:  
+  > Resumen exportado a:   
+  > Output intradía XLSX:  /Users/beatrizorchard/Desktop/Capstone/CapstoneG15/Modelo Interdia Farmacia Anticipada H450/resultados_farmacia_anticipada_h450/solution_interday_farmacia_anticipada_h450-18.xlsx
+
+  --- Diagnóstico escenario: base ---
+  Status Gurobi:           2 (ÓPTIMO)
+  Solución factible:       Sí
+  Objective value:         71.6
+  Best bound:              70.9
+  Gap final:               0.98%
+  Runtime solver:          19.7s
+  Pacientes programados:   949
+  Sesiones agendadas:      10757
+  Máx. ocupación diaria:  696.0
+  Días con módulos extra:  0
+  Total módulos extra:     0.0
+  Máx. módulos extra/día: 0.0
+  Espera promedio 1ª ses:  0.0
+  Espera máxima 1ª ses:    1
+  W del modelo:            696.0
+  Máx. ocupación real:     696.0
+  Diferencia W - max_ocup: -0.0
+
+  Tiempo total de ejecución: 26.1s
+=================================================================
