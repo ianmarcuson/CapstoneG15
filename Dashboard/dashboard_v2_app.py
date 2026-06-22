@@ -179,7 +179,7 @@ DEFAULT_PATHS = [
     SCRIPT_DIR / "test-240.xlsx",
 ]
 HEURISTIC_PATHS = [
-    SCRIPT_DIR / "solution_heuristica_240.xlsx",
+    SCRIPT_DIR / "solution_heuristica_450.xlsx",
     SCRIPT_DIR / "solution_heuristica.xlsx",
 ]
 REPLICAS_PATHS = [
@@ -187,7 +187,7 @@ REPLICAS_PATHS = [
     SCRIPT_DIR / "resultados_intradia_30_replicas",
     SCRIPT_DIR.parent / "Modelo INTRAdia V2" / "resultados_intradia_30_replicas",
 ]
-HEUR_MAX_DAY = 240
+HEUR_MAX_DAY = 450
 
 # ═══════════════════════════════════════════════════════════
 # SIDEBAR — Carga de archivo
