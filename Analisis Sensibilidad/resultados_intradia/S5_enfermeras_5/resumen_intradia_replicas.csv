@@ -1,0 +1,2 @@
+replica,input_solution,output_xlsx,log_file,returncode,status,elapsed_seconds
+1,/Users/beatrizorchard/Desktop/Capstone/CapstoneG15/Analisis Sensibilidad/resultados_interdia/S0_base/solution_interday_S0_base-1.xlsx,/Users/beatrizorchard/Desktop/Capstone/CapstoneG15/Analisis Sensibilidad/resultados_intradia/S5_enfermeras_5/solution_intradia-1.xlsx,/Users/beatrizorchard/Desktop/Capstone/CapstoneG15/Analisis Sensibilidad/resultados_intradia/S5_enfermeras_5/log_intradia-1.txt,0,OK,1283.93

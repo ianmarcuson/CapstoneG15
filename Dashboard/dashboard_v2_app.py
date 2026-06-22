@@ -18,7 +18,9 @@ st.set_page_config(
 )
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-BASE_DIR   = SCRIPT_DIR.parent / "Analisis Sensibilidad" / "resultados_intradia"
+SENS_DIR   = SCRIPT_DIR.parent / "Analisis Sensibilidad"
+BASE_DIR   = SENS_DIR / "resultados_intradia"
+INTERDIA_SENS_DIR = SENS_DIR / "resultados_interdia"
 
 COLORS = {
     "primary": "#6366f1", "success": "#10b981", "warning": "#f59e0b",
@@ -933,16 +935,14 @@ with tab_sens:
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("### 🔬 Análisis de Sensibilidad — Comparación de Escenarios")
 
+    # Escenarios finales con intradia ejecutado. S2, S4 y S6 se excluyen
+    # explicitamente porque no fueron corridos en intradia para la entrega.
     SCENARIO_LABELS = {
-        "S0_base":           "S0 – Base",
-        "S1_demanda_110":    "S1 – Demanda +10%",
-        "S2_demanda_120":    "S2 – Demanda +20%",
-        "S3_sillas_14":      "S3 – 14 Sillas (−1)",
-        "S4_sillas_16":      "S4 – 16 Sillas (+1)",
-        "S5_enfermeras_5":   "S5 – 5 Enfermeras (+1)",
-        "S6_earlycap_200":   "S6 – Farmacia cap 200",
-        "S7_duracion_110":   "S7 – Duración +10%",
-        "S8_eventos_expost": "S8 – Eventos ex post",
+        "S0_base":           "S0 - Base",
+        "S1_demanda_110":    "S1 - Demanda +10%",
+        "S3_sillas_14":      "S3 - 14 Sillas (-1)",
+        "S5_enfermeras_5":   "S5 - 5 Enfermeras (+1)",
+        "S7_duracion_110":   "S7 - Duracion +10%",
     }
 
     available_scen = {}
@@ -950,6 +950,31 @@ with tab_sens:
         fp = BASE_DIR / sid / "solution_intradia-1.xlsx"
         if fp.exists():
             available_scen[sid] = {"label": slabel, "path": str(fp)}
+
+    summary_intradia_path = BASE_DIR / "resumen_intradia_sensibilidad.csv"
+    summary_interdia_path = INTERDIA_SENS_DIR / "resumen_interdia_sensibilidad.csv"
+    with st.expander("Estado de corridas de sensibilidad"):
+        summary_tables = []
+        if summary_interdia_path.exists():
+            df_si = pd.read_csv(summary_interdia_path)
+            if "scenario_id" in df_si.columns:
+                df_si = df_si[df_si["scenario_id"].isin(SCENARIO_LABELS.keys())]
+            df_si = df_si.copy()
+            df_si.insert(0, "etapa", "Interdia")
+            summary_tables.append(df_si)
+        if summary_intradia_path.exists():
+            df_sin = pd.read_csv(summary_intradia_path)
+            if "scenario_id" in df_sin.columns:
+                df_sin = df_sin[df_sin["scenario_id"].isin(SCENARIO_LABELS.keys())]
+            df_sin = df_sin.copy()
+            df_sin.insert(0, "etapa", "Intradia")
+            summary_tables.append(df_sin)
+        if summary_tables:
+            df_status = pd.concat(summary_tables, ignore_index=True, sort=False)
+            keep_cols = [c for c in ["etapa", "scenario_id", "scenario_label", "interdia_source_scenario", "status", "elapsed_seconds", "returncode"] if c in df_status.columns]
+            st.dataframe(df_status[keep_cols], use_container_width=True, hide_index=True)
+        else:
+            st.info("No se encontraron CSV de resumen de sensibilidad.")
 
     scen_rows = []
     for sid, sinfo in available_scen.items():
