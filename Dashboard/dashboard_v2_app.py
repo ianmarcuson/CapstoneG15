@@ -499,20 +499,23 @@ with tab_kpi:
     st.markdown('<div class="section-header">2. Espera Intradía (Farmacia → Tratamiento)</div>', unsafe_allow_html=True)
     st.caption("Módulos entre pharmacy_end y treatment_start, clippeados a 0.")
     c5, c6, c7 = st.columns(3)
-    _metric(c5, "Espera Máxima",       "max_wait_pharm",         "{:.0f} mód", inverse=True)
-    _metric(c6, "Espera Promedio",     "avg_wait_pharm",         "{:.2f} mód", inverse=True)
-    _metric(c7, "Espera Total (suma)", "total_wait_pharm", "{:,.0f} mód", inverse=True)
+    _metric_time(c5, "Espera Máxima", kpis.get("avg_wait_pharm", 0), 0, kpis.get("max_wait_pharm", 0))
+    _metric_time(c6, "Inicio (Desde Llegada)", kpis.get("avg_start_time", 0), 0, kpis.get("max_start_time", 0))
+    _metric_card(c7, "Módulos Extra (Total)", kpis.get("total_extra", 0), kpis.get("extra_day", pd.Series()), "{:,.0f}", "{:.0f}")
 
     st.markdown('<div class="section-header">3. Utilización de Recursos</div>', unsafe_allow_html=True)
     c8, c9, c10, c11 = st.columns(4)
-    _metric(c8,  "Util. Sillas (Total)",    "util_chairs",     "{:.1f}%")
-    _metric(c9,  "Util. Sillas (Regular)",  "util_chairs_reg", "{:.1f}%")
-    _metric(c10, "Ocup. Enfermería",        "util_nurses",     "{:.1f}%")
-    _metric(c11, "Ocup. Farmacia (mód≤20)", "util_pharm",      "{:.1f}%")
+    _metric_card(c8,  "Util. Sillas (Total)", kpis.get("util_chairs", 0), kpis.get("ch_day", pd.Series()), "{:.1f}%", "{:.0f}%")
+    _metric_card(c9,  "Util. Sillas (Regular)", kpis.get("util_chairs_reg", 0), kpis.get("ch_reg_day", pd.Series()), "{:.1f}%", "{:.0f}%")
+    _metric_card(c10, "Ocup. Enfermería", kpis.get("util_nurses", 0), kpis.get("nu_day", pd.Series()), "{:.1f}%", "{:.0f}%")
+    _metric_card(c11, "Ocup. Farmacia (mód≤20)", kpis.get("util_pharm", 0), kpis.get("ph_day", pd.Series()), "{:.1f}%", "{:.0f}%")
 
-    st.markdown('<div class="section-header">4. Saturación Extraordinaria</div>', unsafe_allow_html=True)
-    c12, c13 = st.columns(2)
-    
+    st.markdown('<div class="section-header">4. Estrategia de Farmacia</div>', unsafe_allow_html=True)
+    st.caption("Porcentaje de remedios preparados de forma anticipada (el día anterior).")
+    c12, _, _ = st.columns(3)
+    _metric_card(c12, "Farmacia Anticipada (%)", kpis.get("perc_ant_tot", 0), kpis.get("perc_ant_day", pd.Series()), "{:.1f}%", "{:.0f}%")
+
+    st.markdown('<div class="section-header">5. Saturación Extraordinaria</div>', unsafe_allow_html=True)
 
 
     td = df_prog[df_prog["task_type"] != "pharmacy_only"].copy()
