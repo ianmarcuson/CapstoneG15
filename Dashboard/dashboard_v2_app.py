@@ -314,11 +314,14 @@ REPLICAS_PATHS = [
 ]
 HEUR_MAX_DAY = 450
 
-def _metric_card(col, label, main_val, s_series=None, fmt_main="{}", fmt_sub="{}", is_time=False):
-    if s_series is not None and not s_series.empty:
-        sub_val = f"Mín: {fmt_sub.format(s_series.min())} | Med: {fmt_sub.format(s_series.median())} | Máx: {fmt_sub.format(s_series.max())}"
+def _metric_card(col, label, main_val, s_series=None, fmt_main="{}", fmt_sub="{}", compare_val=None, compare_label="Ref"):
+    if s_series is not None and hasattr(s_series, "empty") and not s_series.empty:
+        sub_val = f"Min: {fmt_sub.format(s_series.min())} | Med: {fmt_sub.format(s_series.median())} | Max: {fmt_sub.format(s_series.max())}"
     else:
         sub_val = " "
+    if compare_val is not None and isinstance(main_val, (int, float, np.integer, np.floating)) and isinstance(compare_val, (int, float, np.integer, np.floating)):
+        delta = float(main_val) - float(compare_val)
+        sub_val = f"{compare_label}: {fmt_main.format(compare_val)} | Delta: {delta:+.1f}"
     html = f"""
     <div style='background-color: white; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 10px; height: 115px;'>
         <div style='color: #666; font-size: 13px; font-weight: 600; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;'>{label}</div>
@@ -328,12 +331,14 @@ def _metric_card(col, label, main_val, s_series=None, fmt_main="{}", fmt_sub="{}
     """
     col.markdown(html, unsafe_allow_html=True)
 
-def _metric_time(col, label, avg_val, min_val, max_val):
-    sub_val = f"Mín: {min_val:.0f} | Máx: {max_val:.0f}"
+def _metric_time(col, label, avg_val, min_val, max_val, compare_avg=None, compare_label="Ref"):
+    sub_val = f"Min: {min_val:.0f} | Max: {max_val:.0f}"
+    if compare_avg is not None and isinstance(avg_val, (int, float, np.integer, np.floating)) and isinstance(compare_avg, (int, float, np.integer, np.floating)):
+        sub_val = f"{compare_label}: {compare_avg:.2f} | Delta: {float(avg_val) - float(compare_avg):+.2f}"
     html = f"""
     <div style='background-color: white; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 10px; height: 115px;'>
         <div style='color: #666; font-size: 13px; font-weight: 600; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;'>{label}</div>
-        <div style='color: #111; font-size: 24px; font-weight: bold; margin-bottom: 2px;'>{avg_val:.2f} mód</div>
+        <div style='color: #111; font-size: 24px; font-weight: bold; margin-bottom: 2px;'>{avg_val:.2f} mod</div>
         <div style='color: #888; font-size: 11px;'>{sub_val}</div>
     </div>
     """
@@ -432,13 +437,24 @@ if df_prog.empty:
 kpis = compute_kpis(df_prog, df_ocup, df_res_raw)
 
 end_h = min(int(end_d), HEUR_MAX_DAY)
-kpis_h = (
-    compute_kpis(
-        df_prog_heur[(df_prog_heur["day"] >= start_d) & (df_prog_heur["day"] <= end_h)],
-        df_ocup_heur[(df_ocup_heur["day"] >= start_d) & (df_ocup_heur["day"] <= end_h)],
-        df_res_heur,
-    ) if df_prog_heur is not None else None
-)
+df_prog_heur_f = None
+df_ocup_heur_f = None
+kpis_h = None
+if df_prog_heur is not None and start_d <= end_h:
+    df_prog_heur_f = df_prog_heur[
+        (df_prog_heur["day"] >= start_d) & (df_prog_heur["day"] <= end_h) &
+        df_prog_heur["patient_type"].isin(sel_types) & df_prog_heur["task_type"].isin(sel_tasks)
+    ].copy()
+    df_ocup_heur_f = df_ocup_heur[(df_ocup_heur["day"] >= start_d) & (df_ocup_heur["day"] <= end_h)].copy() \
+        if df_ocup_heur is not None else pd.DataFrame()
+    if show_extra:
+        df_prog_heur_f = df_prog_heur_f[df_prog_heur_f["extra_chair_modules"] > 0]
+    if show_critical:
+        crit_h = get_critical_days(df_prog_heur, df_ocup_heur)
+        df_prog_heur_f = df_prog_heur_f[df_prog_heur_f["day"].isin(crit_h)]
+        df_ocup_heur_f = df_ocup_heur_f[df_ocup_heur_f["day"].isin(crit_h)]
+    if not df_prog_heur_f.empty:
+        kpis_h = compute_kpis(df_prog_heur_f, df_ocup_heur_f, df_res_heur)
 
 # ═══════════════════════════════════════════════════════════
 # HEADER
@@ -561,72 +577,85 @@ with tab_res:
 # ─────────────────────────────────────────────────────────────────────────────
 with tab_kpi:
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("### Indicadores de Desempeño Operacional")
+    st.markdown("### Indicadores de Desempeno Operacional")
     st.caption("Cumplimiento y espera excluyen tareas `pharmacy_only` (sin tratamiento en silla).")
     st.markdown("<br>", unsafe_allow_html=True)
 
     modo = "Solo Modelo Real"
     if kpis_h is not None:
-        lbl_h = f"Heurística (días {start_d}–{end_h})"
-        modo  = st.radio("Modo de visualización",
-                         ["Solo Modelo Real", f"Solo {lbl_h}", f"Comparación vs {lbl_h}"],
-                         horizontal=True)
+        lbl_h = f"Heuristica (dias {start_d}-{end_h})"
+        modo = st.radio(
+            "Modo de visualizacion",
+            ["Solo Modelo Real", f"Solo {lbl_h}", f"Comparacion vs {lbl_h}"],
+            horizontal=True,
+            key="kpi_detail_mode",
+        )
         st.markdown("<br>", unsafe_allow_html=True)
 
-    def _metric(col, label, key, fmt="{}", inverse=False):
-        vr = kpis.get(key, 0)
-        vh = kpis_h.get(key, 0) if kpis_h else 0
-        vr_s = fmt.format(vr) if vr is not None else "N/A"
-        vh_s = fmt.format(vh) if vh is not None else "N/A"
-        if kpis_h and "Heurística" in modo and "Solo" in modo:
-            col.metric(label, vh_s)
-        elif kpis_h and "Comparación" in modo:
-            if isinstance(vr, (int, float)) and isinstance(vh, (int, float)):
-                delta = vr - vh
-                col.metric(label, vr_s, delta=f"{delta:+.1f}", delta_color="inverse" if inverse else "normal")
-            else:
-                col.metric(label, vr_s)
-        else:
-            col.metric(label, vr_s)
+    show_heur_only = kpis_h is not None and modo.startswith("Solo Heuristica")
+    show_compare = kpis_h is not None and modo.startswith("Comparacion")
+    kpi_main = kpis_h if show_heur_only else kpis
+    kpi_ref = kpis_h if show_compare else None
+    df_prog_kpi = df_prog_heur_f if show_heur_only and df_prog_heur_f is not None else df_prog
+
+    def _ref_val(key):
+        return kpi_ref.get(key) if kpi_ref is not None else None
+
+    def _card(col, label, key, series_key=None, fmt_main="{}", fmt_sub="{}"):
+        _metric_card(
+            col, label, kpi_main.get(key, 0),
+            kpi_main.get(series_key, pd.Series(dtype=float)) if series_key else None,
+            fmt_main, fmt_sub,
+            compare_val=_ref_val(key), compare_label="Heur"
+        )
+
+    def _time_card(col, label, avg_key, max_key):
+        _metric_time(
+            col, label, kpi_main.get(avg_key, 0), 0, kpi_main.get(max_key, 0),
+            compare_avg=_ref_val(avg_key), compare_label="Heur"
+        )
+
+    if show_heur_only:
+        st.info("Mostrando KPIs de la heuristica con el mismo rango y filtros del sidebar.")
+    elif show_compare:
+        st.info("Mostrando modelo real. Cada tarjeta incluye referencia y delta contra heuristica.")
 
     st.markdown('<div class="section-header">1. Demanda y Flujo</div>', unsafe_allow_html=True)
     c1, c2, c3, c4 = st.columns(4)
-    _metric_card(c1, "Sesiones (Total)", kpis.get("sessions", 0), kpis.get("s_day", pd.Series()), "{:,.0f}", "{:.0f}")
-    _metric_card(c2, "Pacientes (Total)", kpis.get("unique_patients", 0), kpis.get("u_day", pd.Series()), "{:,.0f}", "{:.0f}")
-    _metric_card(c3, "Cumpl. Jornada", kpis.get("cumplimiento", 0), kpis.get("cumpl_day", pd.Series()), "{:.1f}%", "{:.0f}%")
-    _metric(c4, "Día Más Cargado", "most_loaded_day", "Día {:.0f}", inverse=True)
+    _card(c1, "Sesiones (Total)", "sessions", "s_day", "{:,.0f}", "{:.0f}")
+    _card(c2, "Pacientes (Total)", "unique_patients", "u_day", "{:,.0f}", "{:.0f}")
+    _card(c3, "Cumpl. Jornada", "cumplimiento", "cumpl_day", "{:.1f}%", "{:.0f}%")
+    _card(c4, "Dia Mas Cargado", "most_loaded_day", None, "Dia {:.0f}", "{:.0f}")
 
-    st.markdown('<div class="section-header">2. Espera Intradía (Farmacia → Tratamiento)</div>', unsafe_allow_html=True)
-    st.caption("Módulos entre pharmacy_end y treatment_start, clippeados a 0.")
+    st.markdown('<div class="section-header">2. Espera Intradia (Farmacia -> Tratamiento)</div>', unsafe_allow_html=True)
+    st.caption("Modulos entre pharmacy_end y treatment_start, clippeados a 0.")
     c5, c6, c7 = st.columns(3)
-    _metric_time(c5, "Espera Máxima", kpis.get("avg_wait_pharm", 0), 0, kpis.get("max_wait_pharm", 0))
-    _metric_time(c6, "Inicio (Desde Llegada)", kpis.get("avg_start_time", 0), 0, kpis.get("max_start_time", 0))
-    _metric_card(c7, "Módulos Extra (Total)", kpis.get("total_extra", 0), kpis.get("extra_day", pd.Series()), "{:,.0f}", "{:.0f}")
+    _time_card(c5, "Espera Prom / Max", "avg_wait_pharm", "max_wait_pharm")
+    _time_card(c6, "Inicio Prom / Max", "avg_start_time", "max_start_time")
+    _card(c7, "Modulos Extra (Total)", "total_extra", "extra_day", "{:,.0f}", "{:.0f}")
 
-    st.markdown('<div class="section-header">3. Utilización de Recursos</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">3. Utilizacion de Recursos</div>', unsafe_allow_html=True)
     c8, c9, c10, c11 = st.columns(4)
-    _metric_card(c8,  "Util. Sillas (Total)", kpis.get("util_chairs", 0), kpis.get("ch_day", pd.Series()), "{:.1f}%", "{:.0f}%")
-    _metric_card(c9,  "Util. Sillas (Regular)", kpis.get("util_chairs_reg", 0), kpis.get("ch_reg_day", pd.Series()), "{:.1f}%", "{:.0f}%")
-    _metric_card(c10, "Ocup. Enfermería", kpis.get("util_nurses", 0), kpis.get("nu_day", pd.Series()), "{:.1f}%", "{:.0f}%")
-    _metric_card(c11, "Ocup. Farmacia (mód≤20)", kpis.get("util_pharm", 0), kpis.get("ph_day", pd.Series()), "{:.1f}%", "{:.0f}%")
+    _card(c8,  "Util. Sillas (Total)", "util_chairs", "ch_day", "{:.1f}%", "{:.0f}%")
+    _card(c9,  "Util. Sillas (Regular)", "util_chairs_reg", "ch_reg_day", "{:.1f}%", "{:.0f}%")
+    _card(c10, "Ocup. Enfermeria", "util_nurses", "nu_day", "{:.1f}%", "{:.0f}%")
+    _card(c11, "Ocup. Farmacia (mod<=20)", "util_pharm", "ph_day", "{:.1f}%", "{:.0f}%")
 
     st.markdown('<div class="section-header">4. Estrategia de Farmacia</div>', unsafe_allow_html=True)
-    st.caption("Porcentaje de remedios preparados de forma anticipada (el día anterior).")
+    st.caption("Porcentaje de remedios preparados de forma anticipada (el dia anterior).")
     c12, _, _ = st.columns(3)
-    _metric_card(c12, "Farmacia Anticipada (%)", kpis.get("perc_ant_tot", 0), kpis.get("perc_ant_day", pd.Series()), "{:.1f}%", "{:.0f}%")
+    _card(c12, "Farmacia Anticipada (%)", "perc_ant_tot", "perc_ant_day", "{:.1f}%", "{:.0f}%")
 
-    st.markdown('<div class="section-header">5. Saturación Extraordinaria</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">5. Saturacion Extraordinaria</div>', unsafe_allow_html=True)
 
-
-    td = df_prog[df_prog["task_type"] != "pharmacy_only"].copy()
+    td = df_prog_kpi[df_prog_kpi["task_type"] != "pharmacy_only"].copy()
     td["espera_real"] = (td["treatment_start"] - td["pharmacy_end"]).clip(lower=0)
     fig_box = px.box(td, x="patient_type", y="espera_real", color="patient_type",
                      color_discrete_sequence=px.colors.qualitative.Bold,
-                     labels={"patient_type": "Tipo de Paciente", "espera_real": "Espera (módulos)"})
+                     labels={"patient_type": "Tipo de Paciente", "espera_real": "Espera (modulos)"})
     fig_box.update_layout(showlegend=False, plot_bgcolor=COLORS["bg"], height=300)
     st.plotly_chart(fig_box, use_container_width=True)
 
-# ─────────────────────────────────────────────────────────────────────────────
 # TAB 3 — DÍA ESPECÍFICO
 # ─────────────────────────────────────────────────────────────────────────────
 with tab_dia:
