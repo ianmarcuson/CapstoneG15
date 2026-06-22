@@ -1,0 +1,23 @@
+Scenario: S9_buffer_6 | Eventos ex post con buffer 6 modulos
+Source intradia scenario: S0_base
+
+Replica 1: C:\Users\ianma\AppData\Local\Programs\Python\Python314\python.exe -X utf8 C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Analisis Sensibilidad\simular_eventos_expost.py --input-xlsx C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Analisis Sensibilidad\resultados_intradia\S0_base\solution_intradia-1.xlsx --output-csv C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Analisis Sensibilidad\resultados_intradia\S9_buffer_6\eventos_expost-1.csv --buffer-modules 6 --buffer-module 28
+[S8/S9] inicio input=C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Analisis Sensibilidad\resultados_intradia\S0_base\solution_intradia-1.xlsx output=C:\Users\ianma\OneDrive\Escritorio\Codigo Capstone\CapstoneG15\Analisis Sensibilidad\resultados_intradia\S9_buffer_6\eventos_expost-1.csv | elapsed=0.0s
+[S8/S9] leyendo hoja Programacion | elapsed=0.0s
+[S8/S9] Programacion cargada filas=13,464 | elapsed=3.4s
+[S8/S9] tratamientos filtrados filas=11,563 buffer_modules=6 buffer_module=28 | elapsed=3.4s
+[S8/S9] iniciando simulaciones n=1,000 | elapsed=3.4s
+[S8/S9] simulacion 1/1,000 | elapsed=3.4s
+[S8/S9] simulacion 100/1,000 | elapsed=7.4s
+[S8/S9] simulacion 200/1,000 | elapsed=13.6s
+[S8/S9] simulacion 300/1,000 | elapsed=19.0s
+[S8/S9] simulacion 400/1,000 | elapsed=25.6s
+[S8/S9] simulacion 500/1,000 | elapsed=30.0s
+[S8/S9] simulacion 600/1,000 | elapsed=34.2s
+[S8/S9] simulacion 700/1,000 | elapsed=38.6s
+[S8/S9] simulacion 800/1,000 | elapsed=42.6s
+[S8/S9] simulacion 900/1,000 | elapsed=48.5s
+[S8/S9] simulacion 1,000/1,000 | elapsed=55.1s
+[S8/S9] concatenando resultados | elapsed=55.2s
+[S8/S9] escribiendo CSV filas=450,000 | elapsed=55.3s
+[S8/S9] fin | elapsed=58.5s

@@ -945,7 +945,7 @@ with tab_sens:
         "S7_duracion_110":   "S7 - Duracion +10%",
     }
 
-    STATUS_SCENARIO_IDS = set(SCENARIO_LABELS.keys()) | {"S8_eventos_expost"}
+    STATUS_SCENARIO_IDS = set(SCENARIO_LABELS.keys()) | {"S8_eventos_expost", "S9_buffer_6"}
 
     available_scen = {}
     for sid, slabel in SCENARIO_LABELS.items():
@@ -1080,8 +1080,9 @@ with tab_sens:
 
 # ─────────────────────────────────────────────────────────────────────────────
 
-    # S8 es una simulacion ex post, no un nuevo calendario intradia.
+    # S8/S9 son simulaciones ex post, no nuevos calendarios intradia.
     s8_path = BASE_DIR / "S8_eventos_expost" / "eventos_expost-1.csv"
+    s9_path = BASE_DIR / "S9_buffer_6" / "eventos_expost-1.csv"
     if s8_path.exists():
         st.markdown('<div class="section-header">S8 - Eventos clinicos ex post sobre caso base</div>', unsafe_allow_html=True)
         df_s8 = pd.read_csv(s8_path)
@@ -1109,7 +1110,7 @@ with tab_sens:
             c7.metric("Sesiones atrasadas prom.", f"{sim_s8['sesiones_atrasadas'].mean():,.1f}")
             c8.metric("P95 dias fuera regular", f"{sim_s8['dias_fuera_regular'].quantile(0.95):.0f}")
 
-            st.caption("Vomito agrega +1 modulo y vasovagal agrega +2 modulos. La simulacion evalua el calendario ya planificado, sin reoptimizar.")
+            st.caption("Vomito agrega +1 modulo y vasovagal agrega +2 modulos. S8 evalua el calendario ya planificado, sin reoptimizar.")
             day_s8 = df_s8.groupby("service_day").agg(
                 sesiones=("sesiones", "mean"),
                 prob_fuera_regular=("termina_fuera_regular", "mean"),
@@ -1129,6 +1130,89 @@ with tab_sens:
                 st.dataframe(day_s8.round(3), use_container_width=True, hide_index=True)
     else:
         st.info("S8 aun no esta cargado. Se espera `Analisis Sensibilidad/resultados_intradia/S8_eventos_expost/eventos_expost-1.csv`.")
+
+    if s9_path.exists():
+        st.markdown('<div class="section-header">S9 - Buffer de 6 modulos a mitad del dia</div>', unsafe_allow_html=True)
+        df_s9 = pd.read_csv(s9_path)
+        required_s9 = {
+            "termina_fuera_regular_no_buffer", "termina_fuera_regular",
+            "termina_fuera_total_no_buffer", "termina_fuera_total",
+            "sesiones_fuera_regular_no_buffer", "sesiones_fuera_regular",
+            "sesiones_fuera_total_no_buffer", "sesiones_fuera_total",
+            "absorbed_by_buffer", "residual_pre_buffer_delay",
+            "max_effective_end_no_buffer", "max_effective_end",
+        }
+        if not df_s9.empty and required_s9.issubset(df_s9.columns):
+            sim_s9 = df_s9.groupby("simulation").agg(
+                dias_fuera_regular_sin_buffer=("termina_fuera_regular_no_buffer", "sum"),
+                dias_fuera_regular_con_buffer=("termina_fuera_regular", "sum"),
+                dias_fuera_total_sin_buffer=("termina_fuera_total_no_buffer", "sum"),
+                dias_fuera_total_con_buffer=("termina_fuera_total", "sum"),
+                sesiones_fuera_regular_sin_buffer=("sesiones_fuera_regular_no_buffer", "sum"),
+                sesiones_fuera_regular_con_buffer=("sesiones_fuera_regular", "sum"),
+                sesiones_fuera_total_sin_buffer=("sesiones_fuera_total_no_buffer", "sum"),
+                sesiones_fuera_total_con_buffer=("sesiones_fuera_total", "sum"),
+                absorbed_by_buffer=("absorbed_by_buffer", "sum"),
+                residual_pre_buffer_delay=("residual_pre_buffer_delay", "sum"),
+                max_end_sin_buffer=("max_effective_end_no_buffer", "max"),
+                max_end_con_buffer=("max_effective_end", "max"),
+            ).reset_index()
+
+            def _reduction(before: pd.Series, after: pd.Series) -> float:
+                b = float(before.mean())
+                return 0.0 if b == 0 else (b - float(after.mean())) / b * 100
+
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric(
+                "Dias fuera regular",
+                f"{sim_s9['dias_fuera_regular_con_buffer'].mean():.1f}",
+                delta=f"-{_reduction(sim_s9['dias_fuera_regular_sin_buffer'], sim_s9['dias_fuera_regular_con_buffer']):.1f}% vs sin buffer",
+            )
+            c2.metric(
+                "Sesiones fuera regular",
+                f"{sim_s9['sesiones_fuera_regular_con_buffer'].mean():.1f}",
+                delta=f"-{_reduction(sim_s9['sesiones_fuera_regular_sin_buffer'], sim_s9['sesiones_fuera_regular_con_buffer']):.1f}% vs sin buffer",
+            )
+            c3.metric(
+                "Dias sobre cierre total",
+                f"{sim_s9['dias_fuera_total_con_buffer'].mean():.1f}",
+                delta=f"-{_reduction(sim_s9['dias_fuera_total_sin_buffer'], sim_s9['dias_fuera_total_con_buffer']):.1f}% vs sin buffer",
+            )
+            c4.metric(
+                "Sesiones sobre cierre total",
+                f"{sim_s9['sesiones_fuera_total_con_buffer'].mean():.1f}",
+                delta=f"-{_reduction(sim_s9['sesiones_fuera_total_sin_buffer'], sim_s9['sesiones_fuera_total_con_buffer']):.1f}% vs sin buffer",
+            )
+
+            c5, c6, c7, c8 = st.columns(4)
+            c5.metric("Buffer absorbido prom.", f"{sim_s9['absorbed_by_buffer'].mean():,.1f} mod")
+            c6.metric("Atraso residual pre-buffer", f"{sim_s9['residual_pre_buffer_delay'].mean():,.1f} mod")
+            c7.metric("Max end P95 sin buffer", f"{sim_s9['max_end_sin_buffer'].quantile(0.95):.0f}")
+            c8.metric("Max end P95 con buffer", f"{sim_s9['max_end_con_buffer'].quantile(0.95):.0f}")
+
+            compare_s9 = pd.DataFrame([
+                {"Indicador": "Dias fuera horario regular", "Sin buffer": sim_s9["dias_fuera_regular_sin_buffer"].mean(), "Con buffer 6": sim_s9["dias_fuera_regular_con_buffer"].mean()},
+                {"Indicador": "Sesiones fuera horario regular", "Sin buffer": sim_s9["sesiones_fuera_regular_sin_buffer"].mean(), "Con buffer 6": sim_s9["sesiones_fuera_regular_con_buffer"].mean()},
+                {"Indicador": "Dias sobre cierre total", "Sin buffer": sim_s9["dias_fuera_total_sin_buffer"].mean(), "Con buffer 6": sim_s9["dias_fuera_total_con_buffer"].mean()},
+                {"Indicador": "Sesiones sobre cierre total", "Sin buffer": sim_s9["sesiones_fuera_total_sin_buffer"].mean(), "Con buffer 6": sim_s9["sesiones_fuera_total_con_buffer"].mean()},
+            ])
+            fig_s9 = px.bar(compare_s9, x="Indicador", y=["Sin buffer", "Con buffer 6"], barmode="group")
+            fig_s9.update_layout(plot_bgcolor=COLORS["bg"], height=340, yaxis_title="Promedio por simulacion", legend_title="Caso")
+            st.plotly_chart(fig_s9, use_container_width=True)
+
+            day_s9 = df_s9.groupby("service_day").agg(
+                sesiones=("sesiones", "mean"),
+                prob_total_sin_buffer=("termina_fuera_total_no_buffer", "mean"),
+                prob_total_con_buffer=("termina_fuera_total", "mean"),
+                absorbed_by_buffer=("absorbed_by_buffer", "mean"),
+                residual_pre_buffer_delay=("residual_pre_buffer_delay", "mean"),
+            ).reset_index()
+            with st.expander("Tabla S9 por dia"):
+                st.dataframe(day_s9.round(3), use_container_width=True, hide_index=True)
+        else:
+            st.warning("S9 existe, pero fue generado con una version anterior. Hay que regenerarlo con el simulador actualizado.")
+    else:
+        st.info("S9 aun no esta cargado. Se espera `Analisis Sensibilidad/resultados_intradia/S9_buffer_6/eventos_expost-1.csv`.")
 
 # TAB 6 — MODELO / CG
 # ─────────────────────────────────────────────────────────────────────────────

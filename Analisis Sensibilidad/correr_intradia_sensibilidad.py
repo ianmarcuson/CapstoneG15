@@ -204,6 +204,13 @@ def run_expost_scenario(
                 "--output-csv",
                 str(output_csv),
             ]
+            if scenario.ex_post_buffer_modules > 0:
+                cmd.extend([
+                    "--buffer-modules",
+                    str(scenario.ex_post_buffer_modules),
+                    "--buffer-module",
+                    str(scenario.ex_post_buffer_module),
+                ])
             log.write(f"Replica {replica}: {' '.join(cmd)}\n")
             log.flush()
             completed = subprocess.run(
@@ -235,11 +242,23 @@ def run_expost_scenario(
 def write_summary(path: Path, rows: List[IntradiaSensitivityResult]) -> None:
     if not rows:
         return
+    fieldnames = list(asdict(rows[0]).keys())
+    merged: dict[str, dict[str, object]] = {}
+    if path.exists():
+        with open(path, newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                sid = row.get("scenario_id")
+                if sid:
+                    merged[sid] = row
+    for row in rows:
+        data = asdict(row)
+        merged[data["scenario_id"]] = data
     with open(path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=list(asdict(rows[0]).keys()))
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
-        for row in rows:
-            writer.writerow(asdict(row))
+        for sid in sorted(merged):
+            writer.writerow({k: merged[sid].get(k, "") for k in fieldnames})
 
 
 def parse_args() -> argparse.Namespace:

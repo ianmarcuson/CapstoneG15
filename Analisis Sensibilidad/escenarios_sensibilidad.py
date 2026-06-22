@@ -16,6 +16,8 @@ class SensitivityScenario:
     run_interdia: bool = True
     interdia_source_scenario: Optional[str] = None
     ex_post_events: bool = False
+    ex_post_buffer_modules: int = 0
+    ex_post_buffer_module: int = 28
 
 
 SCENARIOS = [
@@ -39,6 +41,15 @@ SCENARIOS = [
         run_interdia=False,
         interdia_source_scenario="S0_base",
         ex_post_events=True,
+    ),
+    SensitivityScenario(
+        "S9_buffer_6",
+        "Eventos ex post con buffer 6 modulos",
+        run_interdia=False,
+        interdia_source_scenario="S0_base",
+        ex_post_events=True,
+        ex_post_buffer_modules=6,
+        ex_post_buffer_module=28,
     ),
 ]
 
