@@ -945,6 +945,8 @@ with tab_sens:
         "S7_duracion_110":   "S7 - Duracion +10%",
     }
 
+    STATUS_SCENARIO_IDS = set(SCENARIO_LABELS.keys()) | {"S8_eventos_expost"}
+
     available_scen = {}
     for sid, slabel in SCENARIO_LABELS.items():
         fp = BASE_DIR / sid / "solution_intradia-1.xlsx"
@@ -958,14 +960,14 @@ with tab_sens:
         if summary_interdia_path.exists():
             df_si = pd.read_csv(summary_interdia_path)
             if "scenario_id" in df_si.columns:
-                df_si = df_si[df_si["scenario_id"].isin(SCENARIO_LABELS.keys())]
+                df_si = df_si[df_si["scenario_id"].isin(STATUS_SCENARIO_IDS)]
             df_si = df_si.copy()
             df_si.insert(0, "etapa", "Interdia")
             summary_tables.append(df_si)
         if summary_intradia_path.exists():
             df_sin = pd.read_csv(summary_intradia_path)
             if "scenario_id" in df_sin.columns:
-                df_sin = df_sin[df_sin["scenario_id"].isin(SCENARIO_LABELS.keys())]
+                df_sin = df_sin[df_sin["scenario_id"].isin(STATUS_SCENARIO_IDS)]
             df_sin = df_sin.copy()
             df_sin.insert(0, "etapa", "Intradia")
             summary_tables.append(df_sin)
@@ -1077,6 +1079,57 @@ with tab_sens:
         st.plotly_chart(fig_cmp, use_container_width=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
+
+    # S8 es una simulacion ex post, no un nuevo calendario intradia.
+    s8_path = BASE_DIR / "S8_eventos_expost" / "eventos_expost-1.csv"
+    if s8_path.exists():
+        st.markdown('<div class="section-header">S8 - Eventos clinicos ex post sobre caso base</div>', unsafe_allow_html=True)
+        df_s8 = pd.read_csv(s8_path)
+        if not df_s8.empty:
+            sim_s8 = df_s8.groupby("simulation").agg(
+                vomitos=("eventos_vomito", "sum"),
+                vasovagales=("eventos_vasovagal", "sum"),
+                modulos_atraso=("modulos_atraso", "sum"),
+                sesiones_atrasadas=("sesiones_con_atraso", "sum"),
+                dias_fuera_regular=("termina_fuera_regular", "sum"),
+                dias_fuera_total=("termina_fuera_total", "sum"),
+                sesiones_fuera_regular=("sesiones_fuera_regular", "sum"),
+                sesiones_fuera_total=("sesiones_fuera_total", "sum"),
+                max_effective_end=("max_effective_end", "max"),
+            ).reset_index()
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Simulaciones", f"{sim_s8['simulation'].nunique():,.0f}")
+            c2.metric("Atraso prom. por corrida", f"{sim_s8['modulos_atraso'].mean():,.1f} mod")
+            c3.metric("Dias fuera horario regular", f"{sim_s8['dias_fuera_regular'].mean():.1f}")
+            c4.metric("Prob. exceder cierre total", f"{(sim_s8['dias_fuera_total'].gt(0).mean()*100):.1f}%")
+
+            c5, c6, c7, c8 = st.columns(4)
+            c5.metric("Vomitos prom.", f"{sim_s8['vomitos'].mean():,.1f}")
+            c6.metric("Vasovagales prom.", f"{sim_s8['vasovagales'].mean():,.1f}")
+            c7.metric("Sesiones atrasadas prom.", f"{sim_s8['sesiones_atrasadas'].mean():,.1f}")
+            c8.metric("P95 dias fuera regular", f"{sim_s8['dias_fuera_regular'].quantile(0.95):.0f}")
+
+            st.caption("Vomito agrega +1 modulo y vasovagal agrega +2 modulos. La simulacion evalua el calendario ya planificado, sin reoptimizar.")
+            day_s8 = df_s8.groupby("service_day").agg(
+                sesiones=("sesiones", "mean"),
+                prob_fuera_regular=("termina_fuera_regular", "mean"),
+                prob_fuera_total=("termina_fuera_total", "mean"),
+                avg_modulos_atraso=("modulos_atraso", "mean"),
+                p95_max_effective_end=("max_effective_end", lambda s: s.quantile(0.95)),
+            ).reset_index()
+            top_s8 = day_s8.sort_values(["prob_fuera_regular", "avg_modulos_atraso"], ascending=False).head(15)
+            fig_s8 = px.bar(
+                top_s8, x="service_day", y="avg_modulos_atraso", color="prob_fuera_regular",
+                labels={"service_day": "Dia", "avg_modulos_atraso": "Atraso promedio (modulos)", "prob_fuera_regular": "Prob. fuera regular"},
+                color_continuous_scale="Reds",
+            )
+            fig_s8.update_layout(plot_bgcolor=COLORS["bg"], height=320)
+            st.plotly_chart(fig_s8, use_container_width=True)
+            with st.expander("Tabla S8 por dia"):
+                st.dataframe(day_s8.round(3), use_container_width=True, hide_index=True)
+    else:
+        st.info("S8 aun no esta cargado. Se espera `Analisis Sensibilidad/resultados_intradia/S8_eventos_expost/eventos_expost-1.csv`.")
+
 # TAB 6 — MODELO / CG
 # ─────────────────────────────────────────────────────────────────────────────
 with tab_cg:
