@@ -652,6 +652,7 @@ with tab_dia:
                 st.plotly_chart(fig_r3, width="stretch")
 
                 # --- NUEVA GRÁFICA: Farmacia Detallada ---
+                df_prog_d = df_prog[df_prog['day'] == selected_day].copy()
                 pharm_hoy = [0] * len(day_ocup)
                 pharm_ant = [0] * len(day_ocup)
                 for _, row in df_prog_d.iterrows():
