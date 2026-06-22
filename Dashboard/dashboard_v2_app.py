@@ -1014,6 +1014,16 @@ with tab_sens:
             summary_tables.append(df_sin)
         if summary_tables:
             df_status = pd.concat(summary_tables, ignore_index=True, sort=False)
+            if "scenario_id" in df_status.columns:
+                df_status["scenario_id"] = df_status["scenario_id"].replace({
+                    "S8_eventos_expost": "S5_eventos_expost",
+                    "S9_buffer_6": "S6_buffer_6"
+                })
+            if "scenario_label" in df_status.columns:
+                df_status["scenario_label"] = df_status["scenario_label"].replace({
+                    "Eventos clinicos ex post": "S5 - Eventos clínicos ex post (S8)",
+                    "Eventos ex post con buffer 6 modulos": "S6 - Buffer de 6 módulos (S9)"
+                })
             keep_cols = [c for c in ["etapa", "scenario_id", "scenario_label", "interdia_source_scenario", "status", "elapsed_seconds", "returncode"] if c in df_status.columns]
             st.dataframe(df_status[keep_cols], use_container_width=True, hide_index=True)
         else:
@@ -1089,18 +1099,70 @@ with tab_sens:
             st.dataframe(pd.DataFrame(delta_rows), use_container_width=True, hide_index=True)
 
             st.markdown('<div class="section-header">Radar de KPIs (utilización de recursos)</div>', unsafe_allow_html=True)
+            
+            radar_mode = st.radio(
+                "Modo de visualización del radar:",
+                ["Diferencia Relativa vs S0 (S0 = 100%)", "Valores Absolutos (%)"],
+                index=0,
+                horizontal=True,
+                key="radar_display_mode"
+            )
+            
             r_kpis = ["cumplimiento", "util_chairs", "util_nurses", "util_pharm"]
             r_lbls = ["Cumplimiento", "Util.Sillas", "Util.Enfermería", "Util.Farmacia"]
             fig_rad = go.Figure()
             pal = px.colors.qualitative.Bold
+            
+            base_row_s = df_sens[df_sens["id"] == "S0_base"].iloc[0] if "S0_base" in df_sens["id"].values else None
+            
+            all_r_vals = []
             for i, (_, row) in enumerate(df_sens.iterrows()):
-                vals = [row.get(k, 0) for k in r_kpis]
+                vals = []
+                hover_texts = []
+                for k, lbl in zip(r_kpis, r_lbls):
+                    val = row.get(k, 0)
+                    if radar_mode.startswith("Diferencia Relativa") and base_row_s is not None:
+                        base_val = base_row_s.get(k, 1.0)
+                        if pd.isna(base_val) or base_val == 0:
+                            base_val = 1.0
+                        r_val = (val / base_val) * 100
+                        vals.append(r_val)
+                        all_r_vals.append(r_val)
+                        hover_texts.append(f"{lbl}: {val:.1f}% (Relativo: {r_val:.1f}%)")
+                    else:
+                        vals.append(val)
+                        hover_texts.append(f"{lbl}: {val:.1f}%")
+                
+                vals_loop = vals + [vals[0]]
+                hover_loop = hover_texts + [hover_texts[0]]
+                
                 fig_rad.add_trace(go.Scatterpolar(
-                    r=vals + [vals[0]], theta=r_lbls + [r_lbls[0]],
-                    name=row["escenario"], line_color=pal[i % len(pal)],
+                    r=vals_loop,
+                    theta=r_lbls + [r_lbls[0]],
+                    name=row["escenario"],
+                    line_color=pal[i % len(pal)],
+                    text=hover_loop,
+                    hovertemplate="%{text}<extra></extra>"
                 ))
-            fig_rad.update_layout(polar=dict(radialaxis=dict(range=[0, 100])), showlegend=True, height=400)
+            
+            if radar_mode.startswith("Diferencia Relativa") and all_r_vals:
+                min_r = min(all_r_vals)
+                max_r = max(all_r_vals)
+                r_range = [max(0.0, min_r - 5), max_r + 5]
+                if r_range[1] - r_range[0] < 10:
+                    r_range = [r_range[0] - 5, r_range[1] + 5]
+                fig_rad.update_layout(polar=dict(radialaxis=dict(range=r_range)), showlegend=True, height=400)
+            else:
+                fig_rad.update_layout(polar=dict(radialaxis=dict(range=[15, 100])), showlegend=True, height=400)
+                
             st.plotly_chart(fig_rad, use_container_width=True)
+            
+            if radar_mode.startswith("Diferencia Relativa"):
+                st.caption(
+                    "💡 **Explicación del Radar Relativo:** El Caso Base (S0) representa el círculo en el 100%. "
+                    "Los demás escenarios muestran cómo se desvían sus métricas respecto a S0. "
+                    "Un valor >100% indica mayor utilización/cumplimiento, y <100% indica menor utilización/cumplimiento."
+                )
 
         st.markdown('<div class="section-header">Comparación por KPI individual</div>', unsafe_allow_html=True)
         sel_ks = st.selectbox("KPI a comparar",
@@ -1125,7 +1187,7 @@ with tab_sens:
     s8_path = BASE_DIR / "S8_eventos_expost" / "eventos_expost-1.csv"
     s9_path = BASE_DIR / "S9_buffer_6" / "eventos_expost-1.csv"
     if s8_path.exists():
-        st.markdown('<div class="section-header">S8 - Eventos clinicos ex post sobre caso base</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header">S5 - Eventos clínicos ex post sobre caso base</div>', unsafe_allow_html=True)
         df_s8 = pd.read_csv(s8_path)
         if not df_s8.empty:
             sim_s8 = df_s8.groupby("simulation").agg(
@@ -1151,7 +1213,7 @@ with tab_sens:
             c7.metric("Sesiones atrasadas prom.", f"{sim_s8['sesiones_atrasadas'].mean():,.1f}")
             c8.metric("P95 dias fuera regular", f"{sim_s8['dias_fuera_regular'].quantile(0.95):.0f}")
 
-            st.caption("Vomito agrega +1 modulo y vasovagal agrega +2 modulos. S8 evalua el calendario ya planificado, sin reoptimizar.")
+            st.caption("Vómito agrega +1 módulo y vasovagal agrega +2 módulos. S5 evalúa el calendario ya planificado, sin reoptimizar.")
             day_s8 = df_s8.groupby("service_day").agg(
                 sesiones=("sesiones", "mean"),
                 prob_fuera_regular=("termina_fuera_regular", "mean"),
@@ -1167,13 +1229,13 @@ with tab_sens:
             )
             fig_s8.update_layout(plot_bgcolor=COLORS["bg"], height=320)
             st.plotly_chart(fig_s8, use_container_width=True)
-            with st.expander("Tabla S8 por dia"):
+            with st.expander("Tabla S5 por día"):
                 st.dataframe(day_s8.round(3), use_container_width=True, hide_index=True)
     else:
-        st.info("S8 aun no esta cargado. Se espera `Analisis Sensibilidad/resultados_intradia/S8_eventos_expost/eventos_expost-1.csv`.")
+        st.info("S5 aún no está cargado. Se espera `Analisis Sensibilidad/resultados_intradia/S8_eventos_expost/eventos_expost-1.csv`.")
 
     if s9_path.exists():
-        st.markdown('<div class="section-header">S9 - Buffer de 6 modulos a mitad del dia</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header">S6 - Buffer de 6 módulos a mitad del día</div>', unsafe_allow_html=True)
         df_s9 = pd.read_csv(s9_path)
         required_s9 = {
             "termina_fuera_regular_no_buffer", "termina_fuera_regular",
@@ -1248,12 +1310,11 @@ with tab_sens:
                 absorbed_by_buffer=("absorbed_by_buffer", "mean"),
                 residual_pre_buffer_delay=("residual_pre_buffer_delay", "mean"),
             ).reset_index()
-            with st.expander("Tabla S9 por dia"):
+            with st.expander("Tabla S6 por día"):
                 st.dataframe(day_s9.round(3), use_container_width=True, hide_index=True)
-        else:
-            st.warning("S9 existe, pero fue generado con una version anterior. Hay que regenerarlo con el simulador actualizado.")
     else:
-        st.info("S9 aun no esta cargado. Se espera `Analisis Sensibilidad/resultados_intradia/S9_buffer_6/eventos_expost-1.csv`.")
+        st.info("S6 aún no está cargado. Se espera `Analisis Sensibilidad/resultados_intradia/S9_buffer_6/eventos_expost-1.csv`.")
+
 
 # TAB 6 — MODELO / CG
 # ─────────────────────────────────────────────────────────────────────────────
