@@ -1249,6 +1249,8 @@ def solve_days(
     wait_weight: float = 1e-4,
     end_weight: float = 1e-6,
     n_workers: int = 0,
+    n_sillas_override: Optional[int] = None,
+    n_enfermeras_override: Optional[int] = None,
 ) -> Dict[str, pd.DataFrame]:
     """
     Resuelve todos los días con Column Generation optimizado.
@@ -1261,6 +1263,10 @@ def solve_days(
     timer = ExecutionTimer("modelo intradía optimizado")
     assignments, base_data = load_interday_assignments(solution_path, base_data_path)
     capacity = base_data["capacity"]
+    if n_sillas_override is not None:
+        capacity["chairs"] = int(n_sillas_override)
+    if n_enfermeras_override is not None:
+        capacity["n_enfermeras"] = int(n_enfermeras_override)
     tasks = build_operational_tasks(assignments)
 
     nonempty_days = sorted(tasks["service_day"].unique())
@@ -1423,6 +1429,10 @@ def parse_args():
         choices=["n_farmaceuticos", "modulos_farmacia"], default="n_farmaceuticos")
     parser.add_argument("--nurse-mode",
         choices=["separate", "aggregate"], default="aggregate")
+    parser.add_argument("--n-sillas-override", type=int, default=None,
+        help="Sobrescribe cantidad de sillas leida desde Data G15.xlsx")
+    parser.add_argument("--n-enfermeras-override", type=int, default=None,
+        help="Sobrescribe cantidad de enfermeras leida desde Data G15.xlsx")
     parser.add_argument("--extra-weight", type=float, default=1.0)
     parser.add_argument("--wait-weight",  type=float, default=1e-4,
         help="Penaliza espera entre farmacia lista e inicio de tratamiento")
@@ -1457,6 +1467,8 @@ def main():
         wait_weight=args.wait_weight,
         end_weight=args.end_weight,
         n_workers=args.workers,
+        n_sillas_override=args.n_sillas_override,
+        n_enfermeras_override=args.n_enfermeras_override,
     )
 
 

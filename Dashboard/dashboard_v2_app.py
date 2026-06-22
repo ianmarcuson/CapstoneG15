@@ -708,7 +708,7 @@ with tab_dia:
                                             line=dict(dash="dash", color="#ef4444", width=2))) # danger
                 fig_ph.update_layout(
                     barmode="stack", plot_bgcolor=COLORS["bg"], height=280,
-                    xaxis=dict(title="Módulo", gridcolor="#f4f4f5"),
+                    xaxis=dict(title="Módulo", range=[0, 25], dtick=5, gridcolor="#f4f4f5"),
                     yaxis=dict(title="Drogas Preparando", gridcolor="#f4f4f5"),
                     legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
                 )
@@ -922,6 +922,34 @@ with tab_sens:
                               [(k, lbl) for k, (lbl, _, _) in KPI_COLS.items()],
                               format_func=lambda x: x[1])
 
+        k_sel, lbl_sel = sel_ks
+        fig_cmp = px.bar(
+            df_sens.sort_values(k_sel),
+            x="escenario",
+            y=k_sel,
+            color="escenario",
+            labels={"escenario": "Escenario", k_sel: lbl_sel},
+            color_discrete_sequence=px.colors.qualitative.Bold,
+        )
+        fig_cmp.update_layout(showlegend=False, plot_bgcolor=COLORS["bg"], height=320)
+        st.plotly_chart(fig_cmp, width="stretch")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TAB 6 — MODELO / CG
+# ─────────────────────────────────────────────────────────────────────────────
+with tab_cg:
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("### Diagnóstico del Modelo y Column Generation")
+
+    df_res_f = df_res_raw[(df_res_raw["day"] >= start_d) & (df_res_raw["day"] <= end_d)].copy() \
+        if df_res_raw is not None and not df_res_raw.empty and "day" in df_res_raw.columns else pd.DataFrame()
+    df_cg_f = df_cg_raw[(df_cg_raw["day"] >= start_d) & (df_cg_raw["day"] <= end_d)].copy() \
+        if df_cg_raw is not None and not df_cg_raw.empty and "day" in df_cg_raw.columns else pd.DataFrame()
+    max_iters_s = df_cg_f.groupby("day")["iteration"].max() if not df_cg_f.empty and "iteration" in df_cg_f.columns else pd.Series(dtype=float)
+
+    if df_res_f.empty and df_cg_f.empty:
+        st.info("No hay hojas `Resumen_Dias` o `CG_Historial` disponibles para el archivo cargado.")
+    else:
         if not df_res_f.empty and "total_patterns" in df_res_f.columns:
             st.markdown('<div class="section-header">Patrones Generados por Día</div>', unsafe_allow_html=True)
             fig_pt = go.Figure()
@@ -947,29 +975,32 @@ with tab_sens:
             st.plotly_chart(fig_ob, width="stretch")
 
         st.markdown('<div class="section-header">Convergencia CG — Día Seleccionado</div>', unsafe_allow_html=True)
-        days_cg_multi = sorted(df_cg_f[df_cg_f["iteration"] > 1]["day"].unique())
-        if days_cg_multi:
-            sel_cg_day = st.selectbox(
-                "Día con CG iterativo", days_cg_multi,
-                format_func=lambda d: f"Día {d} ({int(max_iters_s.get(d, 1))} iters)",
-            )
-            cg_day = df_cg_f[df_cg_f["day"] == sel_cg_day].sort_values("iteration")
-            fig_cv = go.Figure()
-            fig_cv.add_trace(go.Scatter(x=cg_day["iteration"], y=cg_day["master_lp_obj"],
-                                        mode="lines+markers", name="Master LP Obj",
-                                        line=dict(color=COLORS["primary"], width=2)))
-            fig_cv.add_trace(go.Bar(x=cg_day["iteration"], y=cg_day["added_patterns"],
-                                    name="Patrones Añadidos", marker_color=COLORS["info"],
-                                    opacity=0.6, yaxis="y2"))
-            fig_cv.update_layout(
-                plot_bgcolor=COLORS["bg"], height=310,
-                xaxis_title="Iteración", yaxis_title="Master LP Obj",
-                yaxis2=dict(title="Patrones añadidos", overlaying="y", side="right", showgrid=False),
-                legend=dict(orientation="h", y=-0.25),
-            )
-            st.plotly_chart(fig_cv, width="stretch")
+        if not df_cg_f.empty and "iteration" in df_cg_f.columns:
+            days_cg_multi = sorted(df_cg_f[df_cg_f["iteration"] > 1]["day"].unique())
+            if days_cg_multi:
+                sel_cg_day = st.selectbox(
+                    "Día con CG iterativo", days_cg_multi,
+                    format_func=lambda d: f"Día {d} ({int(max_iters_s.get(d, 1))} iters)",
+                )
+                cg_day = df_cg_f[df_cg_f["day"] == sel_cg_day].sort_values("iteration")
+                fig_cv = go.Figure()
+                fig_cv.add_trace(go.Scatter(x=cg_day["iteration"], y=cg_day["master_lp_obj"],
+                                            mode="lines+markers", name="Master LP Obj",
+                                            line=dict(color=COLORS["primary"], width=2)))
+                fig_cv.add_trace(go.Bar(x=cg_day["iteration"], y=cg_day["added_patterns"],
+                                        name="Patrones Añadidos", marker_color=COLORS["info"],
+                                        opacity=0.6, yaxis="y2"))
+                fig_cv.update_layout(
+                    plot_bgcolor=COLORS["bg"], height=310,
+                    xaxis_title="Iteración", yaxis_title="Master LP Obj",
+                    yaxis2=dict(title="Patrones añadidos", overlaying="y", side="right", showgrid=False),
+                    legend=dict(orientation="h", y=-0.25),
+                )
+                st.plotly_chart(fig_cv, width="stretch")
+            else:
+                st.info("Todos los días se resolvieron en 1 iteración en el período seleccionado.")
         else:
-            st.info("Todos los días se resolvieron en 1 iteración en el período seleccionado.")
+            st.info("No hay historial de Column Generation para el período seleccionado.")
 
         with st.expander("📋 Ver tabla CG_Historial"):
             st.dataframe(df_cg_f, width="stretch", hide_index=True)

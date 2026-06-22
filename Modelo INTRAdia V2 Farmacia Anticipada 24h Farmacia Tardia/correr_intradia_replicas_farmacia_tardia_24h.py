@@ -88,6 +88,8 @@ def run_intradia_for_replica(
     max_days: Optional[int],
     max_iterations: Optional[int],
     pricing_top_n: Optional[int],
+    n_sillas_override: Optional[int],
+    n_enfermeras_override: Optional[int],
     gurobi_output: bool,
     overwrite: bool,
     start_day: Optional[int] = None,
@@ -139,6 +141,10 @@ def run_intradia_for_replica(
         cmd.extend(["--max-iterations", str(max_iterations)])
     if pricing_top_n is not None:
         cmd.extend(["--pricing-top-n", str(pricing_top_n)])
+    if n_sillas_override is not None:
+        cmd.extend(["--n-sillas-override", str(n_sillas_override)])
+    if n_enfermeras_override is not None:
+        cmd.extend(["--n-enfermeras-override", str(n_enfermeras_override)])
     if gurobi_output:
         cmd.append("--gurobi-output")
 
@@ -283,6 +289,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--end-day", type=int, default=None, help="Día de fin para procesar un rango de días.")
     parser.add_argument("--max-iterations", type=int, default=None, help="Opcional: sobrescribe max iterations del CG.")
     parser.add_argument("--pricing-top-n", type=int, default=None, help="Opcional: columnas negativas maximas por paciente/iteracion.")
+    parser.add_argument("--n-sillas-override", type=int, default=None, help="Sobrescribe cantidad de sillas para el intradia.")
+    parser.add_argument("--n-enfermeras-override", type=int, default=None, help="Sobrescribe cantidad de enfermeras para el intradia.")
     parser.add_argument("--gurobi-output", action="store_true", help="Muestra output interno de Gurobi en logs.")
     parser.add_argument("--overwrite", action="store_true", help="Sobrescribe outputs existentes.")
     return parser.parse_args()
@@ -360,6 +368,8 @@ def main() -> None:
                     max_days=args.max_days,
                     max_iterations=args.max_iterations,
                     pricing_top_n=args.pricing_top_n,
+                    n_sillas_override=args.n_sillas_override,
+                    n_enfermeras_override=args.n_enfermeras_override,
                     gurobi_output=args.gurobi_output,
                     overwrite=args.overwrite,
                     start_day=args.start_day,
