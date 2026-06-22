@@ -374,9 +374,9 @@ with tab_res:
     else:
         insights.append(f"⚠️ Cumplimiento del horario regular: **{kpis['cumplimiento']:.1f}%**.")
     if kpis["max_wait_pharm"] > 6:
-        insights.append(f"⚠️ Espera intradía alta (máx: **{kpis['max_wait']:.0f}** módulos).")
+        insights.append(f"⚠️ Espera intradía alta (máx: **{kpis['max_wait_pharm']:.0f}** módulos).")
     else:
-        insights.append(f"✅ Espera intradía controlada (máx: **{kpis['max_wait']:.0f}** módulos).")
+        insights.append(f"✅ Espera intradía controlada (máx: **{kpis['max_wait_pharm']:.0f}** módulos).")
     ru = max(
         {"Sillas": kpis["util_chairs"], "Enfermería": kpis["util_nurses"], "Farmacia": kpis["util_pharm"]}.items(),
         key=lambda x: x[1]
@@ -451,8 +451,8 @@ with tab_kpi:
     st.markdown('<div class="section-header">2. Espera Intradía (Farmacia → Tratamiento)</div>', unsafe_allow_html=True)
     st.caption("Módulos entre pharmacy_end y treatment_start, clippeados a 0.")
     c5, c6, c7 = st.columns(3)
-    _metric(c5, "Espera Máxima",       "max_wait",         "{:.0f} mód", inverse=True)
-    _metric(c6, "Espera Promedio",     "avg_wait",         "{:.2f} mód", inverse=True)
+    _metric(c5, "Espera Máxima",       "max_wait_pharm",         "{:.0f} mód", inverse=True)
+    _metric(c6, "Espera Promedio",     "avg_wait_pharm",         "{:.2f} mód", inverse=True)
     _metric(c7, "Espera Total (suma)", "total_wait_pharm", "{:,.0f} mód", inverse=True)
 
     st.markdown('<div class="section-header">3. Utilización de Recursos</div>', unsafe_allow_html=True)
@@ -689,8 +689,8 @@ with tab_ic:
                 "Sesiones": kpis.get("sessions"),
                 "Pacientes Únicos": kpis.get("unique_patients"),
                 "Cumpl. Horario (%)": round(kpis.get("cumplimiento", 0), 2),
-                "Espera Máxima (mód)": kpis.get("max_wait"),
-                "Espera Promedio (mód)": round(kpis.get("avg_wait", 0), 2),
+                "Espera Máxima (mód)": kpis.get("max_wait_pharm"),
+                "Espera Promedio (mód)": round(kpis.get("avg_wait_pharm", 0), 2),
                 "Util. Sillas Total (%)": round(kpis.get("util_chairs", 0), 2),
                 "Util. Sillas Regular (%)": round(kpis.get("util_chairs_reg", 0), 2),
                 "Ocup. Enfermería (%)": round(kpis.get("util_nurses", 0), 2),
