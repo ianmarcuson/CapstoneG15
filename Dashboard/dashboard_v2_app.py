@@ -135,8 +135,9 @@ def compute_kpis(df_prog, df_ocup, df_res=None) -> dict:
         reg_oc = df_ocup[df_ocup["is_extra"] == 0]
         ch_reg_day = reg_oc.groupby("day")["chairs_used"].sum() / reg_oc.groupby("day")["chair_capacity"].sum() * 100 if not reg_oc.empty else pd.Series(0, index=df_ocup["day"].unique())
         n_col = _nurse_col(df_ocup)
-        if not n_col.empty and n_col.name in df_ocup.columns:
-            nu_day = df_ocup.groupby("day")[n_col.name].sum() / df_ocup.groupby("day")["nurse_capacity"].sum() * 100
+        if not n_col.empty:
+            df_ocup_tmp = df_ocup.assign(_nc=n_col)
+            nu_day = df_ocup_tmp.groupby("day")["_nc"].sum() / df_ocup_tmp.groupby("day")["nurse_capacity"].sum() * 100
         else:
             nu_day = pd.Series(0, index=df_ocup["day"].unique())
         ph_ops = df_ocup[df_ocup["module"] <= 20]
@@ -154,9 +155,6 @@ def compute_kpis(df_prog, df_ocup, df_res=None) -> dict:
     perc_ant_tot = len(treat[treat["task_type"] == "treatment_only_prepared"]) / len(treat) * 100 if len(treat) > 0 else 0
     extra_day = df_prog.groupby("day")["extra_chair_modules"].sum()
 
-
-    treat = df_prog[df_prog["task_type"] != "pharmacy_only"]
-    total = len(treat)
     cumpl  = (treat["treatment_end"] <= 47).sum() / total * 100 if total > 0 else 0
     espera_pharm = (treat["treatment_start"] - treat["pharmacy_end"]).clip(lower=0)
     inicio_trat = treat["treatment_start"]
@@ -304,15 +302,17 @@ DEFAULT_PATHS = [
     SCRIPT_DIR / "test-240.xlsx",
 ]
 HEURISTIC_PATHS = [
-    SCRIPT_DIR / "solution_heuristica_450.xlsx",
+    SCRIPT_DIR / "solution_heuristica_h450.xlsx",   # Caso Base correcto: mismos pats que Caso Optimizado
+    SCRIPT_DIR / "solution_heuristica_450.xlsx",    # Caso Base anterior (interday distinto)
     SCRIPT_DIR / "solution_heuristica.xlsx",
 ]
+HEUR_MAX_DAY = 449
+WAIT_ALERT_THRESHOLD = 6  # módulos ≈ 90 minutos (1 módulo = 15 min)
 REPLICAS_PATHS = [
     BASE_DIR / "S0_base",
     SCRIPT_DIR / "resultados_intradia_30_replicas",
     SCRIPT_DIR.parent / "Modelo INTRAdia V2" / "resultados_intradia_30_replicas",
 ]
-HEUR_MAX_DAY = 450
 
 def _metric_card(col, label, main_val, s_series=None, fmt_main="{}", fmt_sub="{}", compare_val=None, compare_label="Ref"):
     if s_series is not None and hasattr(s_series, "empty") and not s_series.empty:
@@ -386,6 +386,13 @@ for p in HEURISTIC_PATHS:
     if Path(p).exists():
         _, dph, doh, _ = load_data(str(p))
         if dph is not None:
+            # Normalizar indice de dias: heuristica vieja empieza en dia 1, nueva en 0
+            if dph["day"].min() == 1:
+                dph = dph.copy()
+                dph["day"] = dph["day"] - 1
+                if doh is not None and not doh.empty:
+                    doh = doh.copy()
+                    doh["day"] = doh["day"] - 1
             df_prog_heur = assign_chairs(dph)
             df_ocup_heur = doh
             df_res_heur  = _
@@ -484,11 +491,11 @@ tab_res, tab_kpi, tab_dia, tab_ic, tab_sens, tab_cg = st.tabs([
 with tab_res:
     st.markdown("<br>", unsafe_allow_html=True)
     c1, c2, c3, c4, c5, c6 = st.columns(6)
-    c1.metric("Sesiones",         f"{kpis['sessions']:,}")
+    c1.metric("Total Sesiones",         f"{kpis['sessions']:,}")
     c2.metric("Pacientes Únicos", f"{kpis['unique_patients']:,}")
-    c3.metric("Cumpl. Horario",   f"{kpis['cumplimiento']:.1f}%")
-    _metric_time(c4, "Espera Real (Prom)", kpis.get("avg_wait_pharm", 0), 0, kpis.get("max_wait_pharm", 0))
-    c5.metric("Módulos Extra",    f"{kpis['total_extra']:,}")
+    c3.metric("Cumpl. Horario Reg.",   f"{kpis['cumplimiento']:.1f}%")
+    _metric_time(c4, "Espera Intradía (Prom)", kpis.get("avg_wait_pharm", 0), 0, kpis.get("max_wait_pharm", 0))
+    c5.metric("Módulos Extra Totales",    f"{kpis['total_extra']:,}")
     c6.metric("Días con Extra",   f"{kpis['days_extra']}")
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -537,7 +544,7 @@ with tab_res:
         insights.append(f"✅ Excelente cumplimiento del horario regular ({kpis['cumplimiento']:.1f}%).")
     else:
         insights.append(f"⚠️ Cumplimiento del horario regular: **{kpis['cumplimiento']:.1f}%**.")
-    if kpis["max_wait_pharm"] > 6:
+    if kpis["max_wait_pharm"] > WAIT_ALERT_THRESHOLD:
         insights.append(f"⚠️ Espera intradía alta (máx: **{kpis['max_wait_pharm']:.0f}** módulos).")
     else:
         insights.append(f"✅ Espera intradía controlada (máx: **{kpis['max_wait_pharm']:.0f}** módulos).")
@@ -581,18 +588,18 @@ with tab_kpi:
     st.caption("Cumplimiento y espera excluyen tareas `pharmacy_only` (sin tratamiento en silla).")
     st.markdown("<br>", unsafe_allow_html=True)
 
-    modo = "Solo Modelo Real"
+    modo = "Solo Caso Optimizado"
     if kpis_h is not None:
-        lbl_h = f"Heuristica (dias {start_d}-{end_h})"
+        lbl_h = f"Caso Base (dias {start_d}-{end_h})"
         modo = st.radio(
             "Modo de visualizacion",
-            ["Solo Modelo Real", f"Solo {lbl_h}", f"Comparacion vs {lbl_h}"],
+            ["Solo Caso Optimizado", f"Solo {lbl_h}", f"Comparacion vs {lbl_h}"],
             horizontal=True,
             key="kpi_detail_mode",
         )
         st.markdown("<br>", unsafe_allow_html=True)
 
-    show_heur_only = kpis_h is not None and modo.startswith("Solo Heuristica")
+    show_heur_only = kpis_h is not None and modo.startswith("Solo Caso Base")
     show_compare = kpis_h is not None and modo.startswith("Comparacion")
     kpi_main = kpis_h if show_heur_only else kpis
     kpi_ref = kpis_h if show_compare else None
@@ -606,47 +613,52 @@ with tab_kpi:
             col, label, kpi_main.get(key, 0),
             kpi_main.get(series_key, pd.Series(dtype=float)) if series_key else None,
             fmt_main, fmt_sub,
-            compare_val=_ref_val(key), compare_label="Heur"
+            compare_val=_ref_val(key), compare_label="Base"
         )
 
     def _time_card(col, label, avg_key, max_key):
         _metric_time(
             col, label, kpi_main.get(avg_key, 0), 0, kpi_main.get(max_key, 0),
-            compare_avg=_ref_val(avg_key), compare_label="Heur"
+            compare_avg=_ref_val(avg_key), compare_label="Base"
         )
 
     if show_heur_only:
-        st.info("Mostrando KPIs de la heuristica con el mismo rango y filtros del sidebar.")
+        st.info("Mostrando KPIs del caso base con el mismo rango y filtros del sidebar.")
     elif show_compare:
-        st.info("Mostrando modelo real. Cada tarjeta incluye referencia y delta contra heuristica.")
+        st.info("Mostrando caso optimizado. Cada tarjeta incluye referencia y delta contra el caso base.")
 
-    st.markdown('<div class="section-header">1. Demanda y Flujo</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">KPIs Entregas Anteriores</div>', unsafe_allow_html=True)
+    st.caption(
+        "KPIs 5 y 6 — Espera Promedio/Máxima: tiempo desde llegada al centro hasta inicio "
+        "de tratamiento (incluye preparación en farmacia). "
+        "Ver 'KPIs Adicionales Entrega 3' para la espera estricta farmacia→sillón."
+    )
     c1, c2, c3, c4 = st.columns(4)
-    _card(c1, "Sesiones (Total)", "sessions", "s_day", "{:,.0f}", "{:.0f}")
-    _card(c2, "Pacientes (Total)", "unique_patients", "u_day", "{:,.0f}", "{:.0f}")
-    _card(c3, "Cumpl. Jornada", "cumplimiento", "cumpl_day", "{:.1f}%", "{:.0f}%")
-    _card(c4, "Dia Mas Cargado", "most_loaded_day", None, "Dia {:.0f}", "{:.0f}")
+    _card(c1, "1. Total Sesiones", "sessions", "s_day", "{:,.0f}", "{:.0f}")
+    _card(c2, "2. Pacientes Únicos", "unique_patients", "u_day", "{:,.0f}", "{:.0f}")
+    _card(c3, "3. Día Más Cargado", "most_loaded_day", None, "Día {:.0f}", "{:.0f}")
+    _card(c4, "4. Cumpl. Horario Reg.", "cumplimiento", "cumpl_day", "{:.1f}%", "{:.0f}%")
 
-    st.markdown('<div class="section-header">2. Espera Intradia (Farmacia -> Tratamiento)</div>', unsafe_allow_html=True)
-    st.caption("Modulos entre pharmacy_end y treatment_start, clippeados a 0.")
-    c5, c6, c7 = st.columns(3)
-    _time_card(c5, "Espera Prom / Max", "avg_wait_pharm", "max_wait_pharm")
-    _time_card(c6, "Inicio Prom / Max", "avg_start_time", "max_start_time")
-    _card(c7, "Modulos Extra (Total)", "total_extra", "extra_day", "{:,.0f}", "{:.0f}")
+    st.markdown("<br>", unsafe_allow_html=True)
+    c5, c6, c7, c8 = st.columns(4)
+    _metric_time(c5, "5. Espera Promedio", kpi_main.get("avg_start_time", 0), 0, kpi_main.get("max_start_time", 0), compare_avg=_ref_val("avg_start_time"), compare_label="Base")
+    _card(c6, "6. Espera Máxima", "max_start_time", None, "{:.1f} mod", "")
+    _card(c7, "7. Utilización Sillas (Total)", "util_chairs", "ch_day", "{:.1f}%", "{:.0f}%")
+    _card(c8, "8. Util. Sillas (Solo Reg.)", "util_chairs_reg", "ch_reg_day", "{:.1f}%", "{:.0f}%")
 
-    st.markdown('<div class="section-header">3. Utilizacion de Recursos</div>', unsafe_allow_html=True)
-    c8, c9, c10, c11 = st.columns(4)
-    _card(c8,  "Util. Sillas (Total)", "util_chairs", "ch_day", "{:.1f}%", "{:.0f}%")
-    _card(c9,  "Util. Sillas (Regular)", "util_chairs_reg", "ch_reg_day", "{:.1f}%", "{:.0f}%")
-    _card(c10, "Ocup. Enfermeria", "util_nurses", "nu_day", "{:.1f}%", "{:.0f}%")
-    _card(c11, "Ocup. Farmacia (mod<=20)", "util_pharm", "ph_day", "{:.1f}%", "{:.0f}%")
+    st.markdown("<br>", unsafe_allow_html=True)
+    c9, c10, c11, c12 = st.columns(4)
+    _card(c9,  "9. Ocupación Enfermería", "util_nurses", "nu_day", "{:.1f}%", "{:.0f}%")
+    _card(c10, "10. Ocupación Farmacia (Mód.0-20)", "util_pharm", "ph_day", "{:.1f}%", "{:.0f}%")
+    _card(c11, "11. Módulos Extra Totales", "total_extra", "extra_day", "{:,.0f}", "{:.0f}")
+    _card(c12, "12. Días con Extra", "days_extra", None, "{:.0f}", "{:.0f}")
 
-    st.markdown('<div class="section-header">4. Estrategia de Farmacia</div>', unsafe_allow_html=True)
-    st.caption("Porcentaje de remedios preparados de forma anticipada (el dia anterior).")
-    c12, _, _ = st.columns(3)
-    _card(c12, "Farmacia Anticipada (%)", "perc_ant_tot", "perc_ant_day", "{:.1f}%", "{:.0f}%")
+    st.markdown('<br><div class="section-header">KPIs Adicionales Entrega 3</div>', unsafe_allow_html=True)
+    c13, c14, _ = st.columns(3)
+    _time_card(c13, "Espera Intradía (Prom / Max)", "avg_wait_pharm", "max_wait_pharm")
+    _card(c14, "Farmacia Anticipada (%)", "perc_ant_tot", "perc_ant_day", "{:.1f}%", "{:.0f}%")
 
-    st.markdown('<div class="section-header">5. Saturacion Extraordinaria</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">Distribución de Espera Intradía por Tipo de Paciente</div>', unsafe_allow_html=True)
 
     td = df_prog_kpi[df_prog_kpi["task_type"] != "pharmacy_only"].copy()
     td["espera_real"] = (td["treatment_start"] - td["pharmacy_end"]).clip(lower=0)
