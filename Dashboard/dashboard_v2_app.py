@@ -464,11 +464,7 @@ with tab_kpi:
     _metric(c12, "Módulos Extra Totales", "total_extra", "{:,.0f}", inverse=True)
     _metric(c13, "Días con Uso Extra",   "days_extra",  "{:.0f}",  inverse=True)
 
-    st.markdown('<div class="section-header">5. Desempeño del Modelo</div>', unsafe_allow_html=True)
-    st.metric("Runtime Total del Modelo (s)", f"{kpis.get('runtime_total', 0):.2f} s")
 
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown('<div class="section-header">Distribución de espera por tipo de paciente</div>', unsafe_allow_html=True)
     td = df_prog[df_prog["task_type"] != "pharmacy_only"].copy()
     td["espera_real"] = (td["treatment_start"] - td["pharmacy_end"]).clip(lower=0)
     fig_box = px.box(td, x="patient_type", y="espera_real", color="patient_type",
@@ -813,65 +809,6 @@ with tab_sens:
         sel_ks = st.selectbox("KPI a comparar",
                               [(k, lbl) for k, (lbl, _, _) in KPI_COLS.items()],
                               format_func=lambda x: x[1])
-        fig_bc = go.Figure()
-        pal = px.colors.qualitative.Bold
-        for i, (_, row) in enumerate(df_sens.iterrows()):
-            fig_bc.add_trace(go.Bar(x=[row["escenario"]], y=[row.get(sel_ks[0], 0)],
-                                    name=row["escenario"], marker_color=pal[i % len(pal)]))
-        if base_row_s is not None:
-            fig_bc.add_hline(y=base_row_s.get(sel_ks[0], 0), line_dash="dash",
-                             line_color=COLORS["slate"], annotation_text="Base S0")
-        fig_bc.update_layout(showlegend=False, plot_bgcolor=COLORS["bg"], height=300,
-                             yaxis_title=sel_ks[1], xaxis=dict(gridcolor="#f4f4f5"))
-        st.plotly_chart(fig_bc, width="stretch")
-
-# ─────────────────────────────────────────────────────────────────────────────
-# TAB 6 — MODELO / COLUMN GENERATION
-# ─────────────────────────────────────────────────────────────────────────────
-with tab_cg:
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("### ⚙️ Análisis del Modelo — Column Generation")
-    st.caption("Comportamiento algorítmico del CG que resuelve el problema intradía día a día.")
-
-    if df_cg_raw is None or df_cg_raw.empty:
-        st.info("No se encontró la hoja `CG_Historial` en el archivo cargado.")
-    else:
-        df_cg_f  = df_cg_raw[(df_cg_raw["day"] >= start_d) & (df_cg_raw["day"] <= end_d)].copy()
-        df_res_f = df_res_raw[(df_res_raw["day"] >= start_d) & (df_res_raw["day"] <= end_d)].copy() \
-                   if df_res_raw is not None else pd.DataFrame()
-
-        max_iters_s  = df_cg_f.groupby("day")["iteration"].max()
-        runtime_s    = df_res_f["runtime_final_master"] if "runtime_final_master" in df_res_f.columns else pd.Series()
-
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Días resueltos",        df_cg_f["day"].nunique())
-        c2.metric("Iteraciones CG máx",    int(max_iters_s.max())   if not max_iters_s.empty else "–")
-        c3.metric("Días con >1 iteración", int((max_iters_s > 1).sum()) if not max_iters_s.empty else "–")
-        c4.metric("Runtime total (s)",     f"{runtime_s.sum():.2f}" if not runtime_s.empty else "–")
-
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown('<div class="section-header">Iteraciones de CG por Día</div>', unsafe_allow_html=True)
-        iters_df = max_iters_s.reset_index()
-        iters_df.columns = ["day", "max_iters"]
-        fig_it = go.Figure()
-        fig_it.add_trace(go.Bar(x=iters_df["day"], y=iters_df["max_iters"],
-                                marker_color=COLORS["purple"], name="Iteraciones"))
-        fig_it.add_hline(y=1, line_dash="dash", line_color=COLORS["slate"],
-                         annotation_text="Sin CG adicional")
-        fig_it.update_layout(plot_bgcolor=COLORS["bg"], height=260,
-                             xaxis_title="Día", yaxis_title="Iteraciones",
-                             xaxis=dict(gridcolor="#f4f4f5"), yaxis=dict(gridcolor="#f4f4f5"))
-        st.plotly_chart(fig_it, width="stretch")
-
-        if not df_res_f.empty and "runtime_final_master" in df_res_f.columns:
-            st.markdown('<div class="section-header">Runtime del Master Problem por Día (s)</div>', unsafe_allow_html=True)
-            fig_rt = go.Figure()
-            fig_rt.add_trace(go.Bar(x=df_res_f["day"], y=df_res_f["runtime_final_master"],
-                                    marker_color=COLORS["warning"], name="Runtime (s)"))
-            fig_rt.update_layout(plot_bgcolor=COLORS["bg"], height=240,
-                                 xaxis_title="Día", yaxis_title="Segundos",
-                                 xaxis=dict(gridcolor="#f4f4f5"), yaxis=dict(gridcolor="#f4f4f5"))
-            st.plotly_chart(fig_rt, width="stretch")
 
         if not df_res_f.empty and "total_patterns" in df_res_f.columns:
             st.markdown('<div class="section-header">Patrones Generados por Día</div>', unsafe_allow_html=True)
