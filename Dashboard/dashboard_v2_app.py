@@ -126,7 +126,8 @@ def compute_kpis(df_prog, df_ocup, df_res=None) -> dict:
     treat = df_prog[df_prog["task_type"] != "pharmacy_only"]
     total = len(treat)
     cumpl  = (treat["treatment_end"] <= 47).sum() / total * 100 if total > 0 else 0
-    espera = (treat["treatment_start"] - treat["pharmacy_end"]).clip(lower=0)
+    espera_pharm = (treat["treatment_start"] - treat["pharmacy_end"]).clip(lower=0)
+    inicio_trat = treat["treatment_start"]
 
     n_col     = _nurse_col(df_ocup)
     total_cc  = df_ocup["chair_capacity"].sum() if not df_ocup.empty else 0
@@ -147,8 +148,10 @@ def compute_kpis(df_prog, df_ocup, df_res=None) -> dict:
         "sessions": total, "unique_patients": treat["patient_id"].nunique() if total > 0 else 0,
         "cumplimiento": cumpl, "total_extra": int(df_prog["extra_chair_modules"].sum()),
         "days_extra": int((df_prog.groupby("day")["extra_chair_modules"].sum() > 0).sum()),
-        "max_wait": float(espera.max()) if total > 0 else 0,
-        "avg_wait": float(espera.mean()) if total > 0 else 0,
+        "max_wait_pharm": float(espera_pharm.max()) if total > 0 else 0,
+        "avg_wait_pharm": float(espera_pharm.mean()) if total > 0 else 0,
+        "max_start_time": float(inicio_trat.max()) if total > 0 else 0,
+        "avg_start_time": float(inicio_trat.mean()) if total > 0 else 0,
         "total_wait_pharm": float(tw),
         "util_chairs": util_ch, "util_chairs_reg": util_chr,
         "util_nurses": util_nu, "util_pharm": util_ph,
@@ -320,7 +323,7 @@ with tab_res:
     c1.metric("Sesiones",         f"{kpis['sessions']:,}")
     c2.metric("Pacientes Únicos", f"{kpis['unique_patients']:,}")
     c3.metric("Cumpl. Horario",   f"{kpis['cumplimiento']:.1f}%")
-    c4.metric("Espera Máxima",    f"{kpis['max_wait']:.0f} mód")
+    c4.metric("Espera Máx (Real)", f"{kpis['max_wait_pharm']:.0f} mód")
     c5.metric("Módulos Extra",    f"{kpis['total_extra']:,}")
     c6.metric("Días con Extra",   f"{kpis['days_extra']}")
     st.markdown("<br>", unsafe_allow_html=True)
@@ -370,7 +373,7 @@ with tab_res:
         insights.append(f"✅ Excelente cumplimiento del horario regular ({kpis['cumplimiento']:.1f}%).")
     else:
         insights.append(f"⚠️ Cumplimiento del horario regular: **{kpis['cumplimiento']:.1f}%**.")
-    if kpis["max_wait"] > 6:
+    if kpis["max_wait_pharm"] > 6:
         insights.append(f"⚠️ Espera intradía alta (máx: **{kpis['max_wait']:.0f}** módulos).")
     else:
         insights.append(f"✅ Espera intradía controlada (máx: **{kpis['max_wait']:.0f}** módulos).")
@@ -740,8 +743,10 @@ with tab_sens:
         "sessions":        ("Sesiones",              "{:,.0f}", False),
         "unique_patients": ("Pacientes",              "{:,.0f}", False),
         "cumplimiento":    ("Cumpl. (%)",             "{:.1f}",  False),
-        "max_wait":        ("Esp. Máx (mód)",         "{:.1f}",  True),
-        "avg_wait":        ("Esp. Prom (mód)",        "{:.2f}",  True),
+        "max_wait_pharm":  ("Esp. Máx Farm->Sillón",  "{:.1f}",  True),
+        "max_start_time":  ("Inicio Máx Desde Llegada", "{:.1f}", True),
+        "avg_wait_pharm":  ("Esp. Prom Farm->Sillón", "{:.2f}",  True),
+        "avg_start_time":  ("Inicio Prom Desde Llegada", "{:.2f}", True),
         "total_extra":     ("Mód. Extra",             "{:,.0f}", True),
         "days_extra":      ("Días Extra",             "{:.0f}",  True),
         "util_chairs":     ("Util. Sillas (%)",       "{:.1f}",  False),
