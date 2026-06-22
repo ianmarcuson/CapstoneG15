@@ -211,6 +211,32 @@ REPLICAS_PATHS = [
 ]
 HEUR_MAX_DAY = 450
 
+def _metric_card(col, label, main_val, s_series=None, fmt_main="{}", fmt_sub="{}", is_time=False):
+    if s_series is not None and not s_series.empty:
+        sub_val = f"Mín: {fmt_sub.format(s_series.min())} | Med: {fmt_sub.format(s_series.median())} | Máx: {fmt_sub.format(s_series.max())}"
+    else:
+        sub_val = " "
+    html = f"""
+    <div style='background-color: white; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 10px; height: 115px;'>
+        <div style='color: #666; font-size: 13px; font-weight: 600; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;'>{label}</div>
+        <div style='color: #111; font-size: 24px; font-weight: bold; margin-bottom: 2px;'>{fmt_main.format(main_val)}</div>
+        <div style='color: #888; font-size: 11px;'>{sub_val}</div>
+    </div>
+    """
+    col.markdown(html, unsafe_allow_html=True)
+
+def _metric_time(col, label, avg_val, min_val, max_val):
+    sub_val = f"Mín: {min_val:.0f} | Máx: {max_val:.0f}"
+    html = f"""
+    <div style='background-color: white; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 10px; height: 115px;'>
+        <div style='color: #666; font-size: 13px; font-weight: 600; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;'>{label}</div>
+        <div style='color: #111; font-size: 24px; font-weight: bold; margin-bottom: 2px;'>{avg_val:.2f} mód</div>
+        <div style='color: #888; font-size: 11px;'>{sub_val}</div>
+    </div>
+    """
+    col.markdown(html, unsafe_allow_html=True)
+
+
 # ═══════════════════════════════════════════════════════════
 # SIDEBAR — Carga de archivo
 # ═══════════════════════════════════════════════════════════
@@ -624,6 +650,35 @@ with tab_dia:
                     yaxis=dict(title="Unidades", gridcolor="#f4f4f5"),
                 )
                 st.plotly_chart(fig_r3, width="stretch")
+
+                # --- NUEVA GRÁFICA: Farmacia Detallada ---
+                pharm_hoy = [0] * len(day_ocup)
+                pharm_ant = [0] * len(day_ocup)
+                for _, row in df_prog_d.iterrows():
+                    if row["pharmacy_modules"] > 0 and pd.notna(row["pharmacy_start"]):
+                        s_m = int(row["pharmacy_start"])
+                        e_m = int(row["pharmacy_end"])
+                        for m in range(s_m, e_m + 1):
+                            if m < len(day_ocup):
+                                if row.get("task_type") == "pharmacy_only":
+                                    pharm_ant[m] += 1
+                                else:
+                                    pharm_hoy[m] += 1
+
+                st.markdown('<br><div class="section-header">Ocupación Detallada de Farmacia</div>', unsafe_allow_html=True)
+                fig_ph = go.Figure()
+                fig_ph.add_trace(go.Bar(x=day_ocup["module"], y=pharm_hoy, name="Preparaciones del Día", marker_color="#0ea5e9")) # info
+                fig_ph.add_trace(go.Bar(x=day_ocup["module"], y=pharm_ant, name="Preparaciones Anticipadas", marker_color="#f59e0b")) # warning/orange
+                fig_ph.add_trace(go.Scatter(x=day_ocup["module"], y=day_ocup["pharmacy_capacity"],
+                                            name="Capacidad Farmacia", mode="lines",
+                                            line=dict(dash="dash", color="#ef4444", width=2))) # danger
+                fig_ph.update_layout(
+                    barmode="stack", plot_bgcolor=COLORS["bg"], height=280,
+                    xaxis=dict(title="Módulo", gridcolor="#f4f4f5"),
+                    yaxis=dict(title="Drogas Preparando", gridcolor="#f4f4f5"),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                )
+                st.plotly_chart(fig_ph, width="stretch")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TAB 4 — IC 95%
