@@ -137,6 +137,9 @@ def compute_kpis(df_prog, df_ocup, df_res=None) -> dict:
     ph_day = ph_ops.groupby("day")["pharmacy_used"].sum() / ph_ops.groupby("day")["pharmacy_capacity"].sum() * 100 if not ph_ops.empty else pd.Series(0, index=df_ocup["day"].unique())
 
     cumpl_day = treat.groupby("day").apply(lambda x: (x["treatment_end"] <= 47).sum() / len(x) * 100 if len(x) > 0 else 0)
+    
+    perc_ant_day = (treat[treat["task_type"] == "treatment_only_prepared"].groupby("day").size() / treat.groupby("day").size() * 100).fillna(0)
+    perc_ant_tot = len(treat[treat["task_type"] == "treatment_only_prepared"]) / len(treat) * 100 if len(treat) > 0 else 0
     extra_day = df_prog.groupby("day")["extra_chair_modules"].sum()
 
 
@@ -174,7 +177,7 @@ def compute_kpis(df_prog, df_ocup, df_res=None) -> dict:
         "util_nurses": util_nu, "util_pharm": util_ph,
         "most_loaded_day": ml, "runtime_total": float(runtime),
         "s_day": s_day, "u_day": u_day, "ch_day": ch_day, "ch_reg_day": ch_reg_day,
-        "nu_day": nu_day, "ph_day": ph_day, "cumpl_day": cumpl_day, "extra_day": extra_day,
+        "nu_day": nu_day, "ph_day": ph_day, "cumpl_day": cumpl_day, "extra_day": extra_day, "perc_ant_tot": perc_ant_tot, "perc_ant_day": perc_ant_day,
     }
 
 
@@ -622,8 +625,6 @@ with tab_dia:
 
             if ph_x: fig_p.add_trace(go.Bar(x=ph_x, y=ph_y, base=ph_b, orientation="h", name="Farmacia (Hoy)",
                                              marker_color="#0ea5e9", hovertext=ph_h, hoverinfo="text"))
-            if ph_ant_x: fig_p.add_trace(go.Bar(x=ph_ant_x, y=ph_ant_y, base=ph_ant_b, orientation="h", name="Farmacia (Anticipada)",
-                                             marker_color="#f59e0b", hovertext=ph_ant_h, hoverinfo="text"))
             if wt_x: fig_p.add_trace(go.Bar(x=wt_x, y=wt_y, base=wt_b, orientation="h", name="Espera",
                                              marker_color="#ef4444", hovertext=wt_h, hoverinfo="text"))
             if tr_x: fig_p.add_trace(go.Bar(x=tr_x, y=tr_y, base=tr_b, orientation="h", name="Tratamiento",
