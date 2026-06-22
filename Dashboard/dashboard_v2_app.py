@@ -125,6 +125,23 @@ def compute_kpis(df_prog, df_ocup, df_res=None) -> dict:
         return {}
     treat = df_prog[df_prog["task_type"] != "pharmacy_only"]
     total = len(treat)
+
+    s_day = treat.groupby("day").size()
+    u_day = treat.groupby("day")["patient_id"].nunique()
+    ch_day = df_ocup.groupby("day")["chairs_used"].sum() / df_ocup.groupby("day")["chair_capacity"].sum() * 100
+    reg_oc = df_ocup[df_ocup["is_extra"] == 0]
+    ch_reg_day = reg_oc.groupby("day")["chairs_used"].sum() / reg_oc.groupby("day")["chair_capacity"].sum() * 100 if not reg_oc.empty else pd.Series(0, index=df_ocup["day"].unique())
+    n_col = _nurse_col(df_ocup)
+    nu_day = df_ocup.groupby("day")[n_col.name].sum() / df_ocup.groupby("day")["nurse_capacity"].sum() * 100
+    ph_ops = df_ocup[df_ocup["module"] <= 20]
+    ph_day = ph_ops.groupby("day")["pharmacy_used"].sum() / ph_ops.groupby("day")["pharmacy_capacity"].sum() * 100 if not ph_ops.empty else pd.Series(0, index=df_ocup["day"].unique())
+
+    cumpl_day = treat.groupby("day").apply(lambda x: (x["treatment_end"] <= 47).sum() / len(x) * 100 if len(x) > 0 else 0)
+    extra_day = df_prog.groupby("day")["extra_chair_modules"].sum()
+
+
+    treat = df_prog[df_prog["task_type"] != "pharmacy_only"]
+    total = len(treat)
     cumpl  = (treat["treatment_end"] <= 47).sum() / total * 100 if total > 0 else 0
     espera_pharm = (treat["treatment_start"] - treat["pharmacy_end"]).clip(lower=0)
     inicio_trat = treat["treatment_start"]
@@ -156,6 +173,8 @@ def compute_kpis(df_prog, df_ocup, df_res=None) -> dict:
         "util_chairs": util_ch, "util_chairs_reg": util_chr,
         "util_nurses": util_nu, "util_pharm": util_ph,
         "most_loaded_day": ml, "runtime_total": float(runtime),
+        "s_day": s_day, "u_day": u_day, "ch_day": ch_day, "ch_reg_day": ch_reg_day,
+        "nu_day": nu_day, "ph_day": ph_day, "cumpl_day": cumpl_day, "extra_day": extra_day,
     }
 
 
@@ -323,7 +342,7 @@ with tab_res:
     c1.metric("Sesiones",         f"{kpis['sessions']:,}")
     c2.metric("Pacientes Únicos", f"{kpis['unique_patients']:,}")
     c3.metric("Cumpl. Horario",   f"{kpis['cumplimiento']:.1f}%")
-    c4.metric("Espera Máx (Real)", f"{kpis['max_wait_pharm']:.0f} mód")
+    _metric_time(c4, "Espera Real (Prom)", kpis.get("avg_wait_pharm", 0), 0, kpis.get("max_wait_pharm", 0))
     c5.metric("Módulos Extra",    f"{kpis['total_extra']:,}")
     c6.metric("Días con Extra",   f"{kpis['days_extra']}")
     st.markdown("<br>", unsafe_allow_html=True)
@@ -443,9 +462,9 @@ with tab_kpi:
 
     st.markdown('<div class="section-header">1. Demanda y Flujo</div>', unsafe_allow_html=True)
     c1, c2, c3, c4 = st.columns(4)
-    _metric(c1, "Total Sesiones", "sessions", "{:,.0f}")
-    _metric(c2, "Pacientes Únicos", "unique_patients", "{:,.0f}")
-    _metric(c3, "Cumpl. Horario Regular", "cumplimiento", "{:.1f}%")
+    _metric_card(c1, "Sesiones (Total)", kpis.get("sessions", 0), kpis.get("s_day", pd.Series()), "{:,.0f}", "{:.0f}")
+    _metric_card(c2, "Pacientes (Total)", kpis.get("unique_patients", 0), kpis.get("u_day", pd.Series()), "{:,.0f}", "{:.0f}")
+    _metric_card(c3, "Cumpl. Jornada", kpis.get("cumplimiento", 0), kpis.get("cumpl_day", pd.Series()), "{:.1f}%", "{:.0f}%")
     _metric(c4, "Día Más Cargado", "most_loaded_day", "Día {:.0f}", inverse=True)
 
     st.markdown('<div class="section-header">2. Espera Intradía (Farmacia → Tratamiento)</div>', unsafe_allow_html=True)
@@ -464,8 +483,7 @@ with tab_kpi:
 
     st.markdown('<div class="section-header">4. Saturación Extraordinaria</div>', unsafe_allow_html=True)
     c12, c13 = st.columns(2)
-    _metric(c12, "Módulos Extra Totales", "total_extra", "{:,.0f}", inverse=True)
-    _metric(c13, "Días con Uso Extra",   "days_extra",  "{:.0f}",  inverse=True)
+    
 
 
     td = df_prog[df_prog["task_type"] != "pharmacy_only"].copy()
