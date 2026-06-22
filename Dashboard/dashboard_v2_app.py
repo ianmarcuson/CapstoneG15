@@ -558,7 +558,7 @@ with tab_dia:
 
         with t_sillas:
             fig_g = go.Figure()
-            colors_pat = px.colors.qualitative.Pastel + px.colors.qualitative.Set3 + px.colors.qualitative.Safe
+            colors_pat = px.colors.qualitative.Alphabet + px.colors.qualitative.Dark24 + px.colors.qualitative.Light24
             for _, r in treat_day.iterrows():
                 hover = (f"Paciente: {r['patient_id']} | Tipo: {r['patient_type']}<br>"
                          f"Tarea: {r['task_type']}<br>"
@@ -592,26 +592,45 @@ with tab_dia:
             fig_p = go.Figure()
             dps = day_prog.sort_values("treatment_start", ascending=False)
             ph_x, ph_y, ph_b, ph_h = [], [], [], []
+            ph_ant_x, ph_ant_y, ph_ant_b, ph_ant_h = [], [], [], []
             wt_x, wt_y, wt_b, wt_h = [], [], [], []
             tr_x, tr_y, tr_b, tr_h = [], [], [], []
+            tr_ant_x, tr_ant_y, tr_ant_b, tr_ant_h = [], [], [], []
+
             for _, r in dps.iterrows():
                 pid = f"P{r['patient_id']}"
                 hov = f"Pac:{r['patient_id']}|Tipo:{r['patient_type']}<br>Tarea:{r['task_type']}"
                 pm  = r.get("pharmacy_modules") or 0
                 if pm > 0:
-                    ph_x.append(pm); ph_y.append(pid); ph_b.append(r["pharmacy_start"]); ph_h.append(hov)
-                w = max(0, (r["treatment_start"] or 0) - (r["pharmacy_end"] or 0))
-                if w > 0:
-                    wt_x.append(w); wt_y.append(pid); wt_b.append(r["pharmacy_end"]); wt_h.append(hov)
+                    if r["task_type"] == "pharmacy_only":
+                        ph_ant_x.append(pm); ph_ant_y.append(pid); ph_ant_b.append(r["pharmacy_start"]); ph_ant_h.append(hov)
+                    else:
+                        ph_x.append(pm); ph_y.append(pid); ph_b.append(r["pharmacy_start"]); ph_h.append(hov)
+                
+                # Wait time
+                if r["task_type"] != "pharmacy_only" and pd.notna(r["pharmacy_end"]):
+                    w = max(0, (r["treatment_start"] or 0) - (r["pharmacy_end"] or 0))
+                    if w > 0:
+                        wt_x.append(w); wt_y.append(pid); wt_b.append(r["pharmacy_end"]); wt_h.append(hov)
+                
                 tm = r.get("treatment_modules") or 0
                 if tm > 0:
-                    tr_x.append(tm); tr_y.append(pid); tr_b.append(r["treatment_start"]); tr_h.append(hov)
-            if ph_x: fig_p.add_trace(go.Bar(x=ph_x, y=ph_y, base=ph_b, orientation="h", name="Farmacia",
-                                             marker_color=COLORS["info"],    hovertext=ph_h, hoverinfo="text"))
+                    if r["task_type"] == "treatment_only_prepared":
+                        tr_ant_x.append(tm); tr_ant_y.append(pid); tr_ant_b.append(r["treatment_start"]); tr_ant_h.append(hov)
+                    else:
+                        tr_x.append(tm); tr_y.append(pid); tr_b.append(r["treatment_start"]); tr_h.append(hov)
+
+            if ph_x: fig_p.add_trace(go.Bar(x=ph_x, y=ph_y, base=ph_b, orientation="h", name="Farmacia (Hoy)",
+                                             marker_color="#0ea5e9", hovertext=ph_h, hoverinfo="text"))
+            if ph_ant_x: fig_p.add_trace(go.Bar(x=ph_ant_x, y=ph_ant_y, base=ph_ant_b, orientation="h", name="Farmacia (Anticipada)",
+                                             marker_color="#f59e0b", hovertext=ph_ant_h, hoverinfo="text"))
             if wt_x: fig_p.add_trace(go.Bar(x=wt_x, y=wt_y, base=wt_b, orientation="h", name="Espera",
-                                             marker_color=COLORS["danger"],  hovertext=wt_h, hoverinfo="text"))
+                                             marker_color="#ef4444", hovertext=wt_h, hoverinfo="text"))
             if tr_x: fig_p.add_trace(go.Bar(x=tr_x, y=tr_y, base=tr_b, orientation="h", name="Tratamiento",
-                                             marker_color=COLORS["success"], hovertext=tr_h, hoverinfo="text"))
+                                             marker_color="#10b981", hovertext=tr_h, hoverinfo="text"))
+            if tr_ant_x: fig_p.add_trace(go.Bar(x=tr_ant_x, y=tr_ant_y, base=tr_ant_b, orientation="h", name="Tratamiento (Droga Lista)",
+                                             marker_color="#14b8a6", hovertext=tr_ant_h, hoverinfo="text"))
+            
             fig_p.add_vline(x=48, line_width=2, line_dash="dash", line_color=COLORS["danger"])
             fig_p.update_layout(
                 barmode="stack",
