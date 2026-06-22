@@ -128,13 +128,23 @@ def compute_kpis(df_prog, df_ocup, df_res=None) -> dict:
 
     s_day = treat.groupby("day").size()
     u_day = treat.groupby("day")["patient_id"].nunique()
-    ch_day = df_ocup.groupby("day")["chairs_used"].sum() / df_ocup.groupby("day")["chair_capacity"].sum() * 100
-    reg_oc = df_ocup[df_ocup["is_extra"] == 0]
-    ch_reg_day = reg_oc.groupby("day")["chairs_used"].sum() / reg_oc.groupby("day")["chair_capacity"].sum() * 100 if not reg_oc.empty else pd.Series(0, index=df_ocup["day"].unique())
-    n_col = _nurse_col(df_ocup)
-    nu_day = df_ocup.groupby("day")[n_col.name].sum() / df_ocup.groupby("day")["nurse_capacity"].sum() * 100
-    ph_ops = df_ocup[df_ocup["module"] <= 20]
-    ph_day = ph_ops.groupby("day")["pharmacy_used"].sum() / ph_ops.groupby("day")["pharmacy_capacity"].sum() * 100 if not ph_ops.empty else pd.Series(0, index=df_ocup["day"].unique())
+    if df_ocup is not None and not df_ocup.empty:
+        ch_day = df_ocup.groupby("day")["chairs_used"].sum() / df_ocup.groupby("day")["chair_capacity"].sum() * 100
+        reg_oc = df_ocup[df_ocup["is_extra"] == 0]
+        ch_reg_day = reg_oc.groupby("day")["chairs_used"].sum() / reg_oc.groupby("day")["chair_capacity"].sum() * 100 if not reg_oc.empty else pd.Series(0, index=df_ocup["day"].unique())
+        n_col = _nurse_col(df_ocup)
+        if not n_col.empty and n_col.name in df_ocup.columns:
+            nu_day = df_ocup.groupby("day")[n_col.name].sum() / df_ocup.groupby("day")["nurse_capacity"].sum() * 100
+        else:
+            nu_day = pd.Series(0, index=df_ocup["day"].unique())
+        ph_ops = df_ocup[df_ocup["module"] <= 20]
+        ph_day = ph_ops.groupby("day")["pharmacy_used"].sum() / ph_ops.groupby("day")["pharmacy_capacity"].sum() * 100 if not ph_ops.empty else pd.Series(0, index=df_ocup["day"].unique())
+    else:
+        df_ocup = pd.DataFrame()
+        ch_day = pd.Series(dtype=float)
+        ch_reg_day = pd.Series(dtype=float)
+        nu_day = pd.Series(dtype=float)
+        ph_day = pd.Series(dtype=float)
 
     cumpl_day = treat.groupby("day").apply(lambda x: (x["treatment_end"] <= 47).sum() / len(x) * 100 if len(x) > 0 else 0)
     
@@ -193,6 +203,94 @@ def get_critical_days(df_prog, df_ocup):
     nc = df_ocup[ns == df_ocup["nurse_capacity"]]["day"].unique() if not ns.empty else []
     pc = df_ocup[df_ocup["pharmacy_used"] == df_ocup["pharmacy_capacity"]]["day"].unique()
     return list(set(ed) | set(wd) | set(cc) | set(nc) | set(pc))
+
+
+def summarize_ci(values: pd.Series) -> dict:
+    vals = pd.to_numeric(values, errors="coerce").dropna()
+    n = len(vals)
+    if n == 0:
+        return {"n": 0, "mean": np.nan, "ci95_low": np.nan, "ci95_high": np.nan, "min": np.nan, "max": np.nan}
+    mean = float(vals.mean())
+    std = float(vals.std(ddof=1)) if n > 1 else 0.0
+    t_val = 2.045 if n == 30 else 1.96
+    margin = t_val * std / np.sqrt(n) if n > 1 else 0.0
+    return {
+        "n": n,
+        "mean": mean,
+        "ci95_low": mean - margin,
+        "ci95_high": mean + margin,
+        "min": float(vals.min()),
+        "max": float(vals.max()),
+    }
+
+
+def _count_unique_patient_ids(series: pd.Series) -> int:
+    patient_ids = set()
+    for value in series.dropna():
+        for raw_id in str(value).split("|"):
+            if raw_id != "":
+                patient_ids.add(raw_id)
+    return len(patient_ids)
+
+
+def summarize_range_from_daily_replicas(df_daily_rep: pd.DataFrame, start_day: int, end_day: int) -> pd.DataFrame:
+    if df_daily_rep.empty or "replica" not in df_daily_rep.columns or "day" not in df_daily_rep.columns:
+        return pd.DataFrame()
+
+    df = df_daily_rep[(df_daily_rep["day"] >= start_day) & (df_daily_rep["day"] <= end_day)].copy()
+    if df.empty:
+        return pd.DataFrame()
+
+    rows = []
+    for replica, grp in df.groupby("replica"):
+        sessions = float(grp["daily_sessions"].sum())
+        chairs_capacity = float(grp["daily_chairs_capacity_sum"].sum())
+        chairs_reg_capacity = float(grp["daily_chairs_reg_capacity_sum"].sum())
+        nurse_capacity = float(grp["daily_nurse_capacity_sum"].sum())
+        pharm_capacity = float(grp["daily_pharmacy_capacity_0_20_sum"].sum())
+        most_loaded_day = np.nan
+        if "daily_treatment_modules" in grp.columns and not grp.empty:
+            most_loaded_day = int(grp.loc[grp["daily_treatment_modules"].idxmax(), "day"])
+
+        rows.append({
+            "replica": replica,
+            "sessions": sessions,
+            "unique_patients": _count_unique_patient_ids(grp.get("daily_patient_ids", pd.Series(dtype=str))),
+            "cumplimiento": (grp["daily_ontime_sessions"].sum() / sessions * 100) if sessions > 0 else np.nan,
+            "total_extra": float(grp["daily_extra_modules"].sum()),
+            "days_extra": int((grp["daily_extra_modules"] > 0).sum()),
+            "max_wait": float(grp["daily_max_wait"].max()) if "daily_max_wait" in grp.columns else np.nan,
+            "avg_wait": (grp["daily_avg_wait"] * grp["daily_sessions"]).sum() / sessions if sessions > 0 else np.nan,
+            "util_chairs": grp["daily_chairs_used_sum"].sum() / chairs_capacity * 100 if chairs_capacity > 0 else np.nan,
+            "util_chairs_reg": grp["daily_chairs_reg_used_sum"].sum() / chairs_reg_capacity * 100 if chairs_reg_capacity > 0 else np.nan,
+            "util_nurses": grp["daily_nurse_used_sum"].sum() / nurse_capacity * 100 if nurse_capacity > 0 else np.nan,
+            "util_pharm": grp["daily_pharmacy_used_0_20_sum"].sum() / pharm_capacity * 100 if pharm_capacity > 0 else np.nan,
+            "most_loaded_day": most_loaded_day,
+        })
+
+    df_range_rep = pd.DataFrame(rows)
+    labels = {
+        "sessions": "Sesiones realizadas",
+        "unique_patients": "Pacientes unicos",
+        "cumplimiento": "Cumplimiento horario regular (%)",
+        "total_extra": "Modulos extra totales",
+        "days_extra": "Dias con extra",
+        "max_wait": "Espera maxima (mod)",
+        "avg_wait": "Espera promedio (mod)",
+        "util_chairs": "Utilizacion sillas total (%)",
+        "util_chairs_reg": "Utilizacion sillas regulares (%)",
+        "util_nurses": "Ocupacion enfermeria (%)",
+        "util_pharm": "Ocupacion farmacia (%)",
+        "most_loaded_day": "Dia mas cargado",
+    }
+    summary_rows = []
+    for kpi, label in labels.items():
+        if kpi not in df_range_rep.columns:
+            continue
+        row = {"kpi": kpi, "label": label}
+        row.update(summarize_ci(df_range_rep[kpi]))
+        summary_rows.append(row)
+    return pd.DataFrame(summary_rows)
 
 
 # ═══════════════════════════════════════════════════════════
@@ -409,7 +507,7 @@ with tab_res:
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         margin=dict(l=60, r=60, t=40, b=40), height=340,
     )
-    st.plotly_chart(fig_main, width="stretch")
+    st.plotly_chart(fig_main, use_container_width=True)
 
     st.markdown('<div class="section-header">💡 Lectura rápida</div>', unsafe_allow_html=True)
     insights = []
@@ -453,8 +551,8 @@ with tab_res:
     else:
         crit_df = crit_stats.copy()
     crit_df = crit_df.sort_values(["Mód_Extra", "Mód_Trat", "Espera_Max"], ascending=False).head(5).reset_index(drop=True)
-    crit_df.insert(0, "Día Cal.", crit_df["day"] + 1)
-    st.dataframe(crit_df, width="stretch", hide_index=True)
+    crit_df.rename(columns={"day": "Día"}, inplace=True)
+    st.dataframe(crit_df, use_container_width=True, hide_index=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TAB 2 — KPIs DETALLADOS
@@ -524,7 +622,7 @@ with tab_kpi:
                      color_discrete_sequence=px.colors.qualitative.Bold,
                      labels={"patient_type": "Tipo de Paciente", "espera_real": "Espera (módulos)"})
     fig_box.update_layout(showlegend=False, plot_bgcolor=COLORS["bg"], height=300)
-    st.plotly_chart(fig_box, width="stretch")
+    st.plotly_chart(fig_box, use_container_width=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TAB 3 — DÍA ESPECÍFICO
@@ -597,7 +695,7 @@ with tab_dia:
                 plot_bgcolor=COLORS["bg"], height=420,
                 legend=dict(orientation="h", y=-0.2),
             )
-            st.plotly_chart(fig_g, width="stretch")
+            st.plotly_chart(fig_g, use_container_width=True)
 
         with t_pacs:
             fig_p = go.Figure()
@@ -650,7 +748,7 @@ with tab_dia:
                 plot_bgcolor=COLORS["bg"], height=max(300, len(day_prog) * 14),
                 legend=dict(orientation="h", y=-0.15),
             )
-            st.plotly_chart(fig_p, width="stretch")
+            st.plotly_chart(fig_p, use_container_width=True)
 
         with t_recs:
             if day_ocup.empty:
@@ -679,7 +777,7 @@ with tab_dia:
                     xaxis=dict(title="Módulo", gridcolor="#f4f4f5"),
                     yaxis=dict(title="Unidades", gridcolor="#f4f4f5"),
                 )
-                st.plotly_chart(fig_r3, width="stretch")
+                st.plotly_chart(fig_r3, use_container_width=True)
 
                 # --- NUEVA GRÁFICA: Farmacia Detallada ---
                 if "pharmacy_day" in df_prog_raw.columns:
@@ -712,7 +810,7 @@ with tab_dia:
                     yaxis=dict(title="Drogas Preparando", gridcolor="#f4f4f5"),
                     legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
                 )
-                st.plotly_chart(fig_ph, width="stretch")
+                st.plotly_chart(fig_ph, use_container_width=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TAB 4 — IC 95%
@@ -730,11 +828,13 @@ with tab_ic:
     summary_csv  = replicas_folder / "kpis_intradia_ic95.csv"       if replicas_folder else None
     replicas_csv = replicas_folder / "kpis_intradia_replicas.csv"   if replicas_folder else None
     daily_csv    = replicas_folder / "kpis_intradia_daily_ic95.csv" if replicas_folder else None
+    daily_rep_csv = replicas_folder / "kpis_intradia_daily_replicas.csv" if replicas_folder else None
 
     if replicas_folder and summary_csv and summary_csv.exists() and replicas_csv and replicas_csv.exists():
         df_ic_data  = pd.read_csv(summary_csv)
         df_rep_data = pd.read_csv(replicas_csv)
         df_daily_ic = pd.read_csv(daily_csv) if daily_csv and daily_csv.exists() else pd.DataFrame()
+        df_daily_rep = pd.read_csv(daily_rep_csv) if daily_rep_csv and daily_rep_csv.exists() else pd.DataFrame()
         if "day" in df_daily_ic.columns and not df_daily_ic.empty:
             df_daily_ic = df_daily_ic[(df_daily_ic["day"] >= start_d) & (df_daily_ic["day"] <= end_d)]
         n_rep = df_rep_data["replica"].nunique() if "replica" in df_rep_data.columns else len(df_rep_data)
@@ -744,7 +844,24 @@ with tab_ic:
         c2.metric("KPIs resumidos", len(df_ic_data))
         c3.metric("Días con IC diario", df_daily_ic["day"].nunique() if not df_daily_ic.empty else 0)
         cols_show = [c for c in ["label", "n", "mean", "ci95_low", "ci95_high", "min", "max"] if c in df_ic_data.columns]
-        st.dataframe(df_ic_data[cols_show], width="stretch", hide_index=True)
+        df_range_ic = summarize_range_from_daily_replicas(df_daily_rep, int(start_d), int(end_d))
+        if not df_range_ic.empty:
+            st.markdown('<div class="section-header">KPIs IC 95% del rango seleccionado</div>', unsafe_allow_html=True)
+            st.caption("Calculado desde `kpis_intradia_daily_replicas.csv`; cambia con el rango de días del menú lateral.")
+            range_cols = [c for c in ["label", "n", "mean", "ci95_low", "ci95_high", "min", "max"] if c in df_range_ic.columns]
+            st.dataframe(df_range_ic[range_cols], use_container_width=True, hide_index=True)
+
+            most_loaded = df_range_ic[df_range_ic["kpi"] == "most_loaded_day"]
+            if not most_loaded.empty and not pd.isna(most_loaded.iloc[0]["mean"]):
+                st.info(
+                    "El KPI `Día más cargado` se recalcula para el rango seleccionado. "
+                    "La media puede ser decimal porque resume 30 réplicas."
+                )
+        else:
+            st.warning("No se encontró `kpis_intradia_daily_replicas.csv`; se muestran solo IC globales.")
+
+        with st.expander("Ver IC globales del horizonte completo"):
+            st.dataframe(df_ic_data[cols_show], use_container_width=True, hide_index=True)
         if not df_daily_ic.empty and "label" in df_daily_ic.columns:
             st.markdown('<div class="section-header">Evolución diaria con banda IC 95%</div>', unsafe_allow_html=True)
             sel_kpi_ic = st.selectbox("KPI diario", sorted(df_daily_ic["label"].dropna().unique()))
@@ -762,7 +879,7 @@ with tab_ic:
                                             marker=dict(size=3)))
                 fig_ic.update_layout(plot_bgcolor=COLORS["bg"], height=320,
                                      xaxis_title="Día", yaxis_title=sel_kpi_ic)
-                st.plotly_chart(fig_ic, width="stretch")
+                st.plotly_chart(fig_ic, use_container_width=True)
     else:
         rep_files = sorted(replicas_folder.glob("solution_intradia-*.xlsx")) if replicas_folder else []
         if len(rep_files) > 1:
@@ -784,7 +901,7 @@ with tab_ic:
                 summary["ci95_low"] = summary["mean"] - t * summary["se"]
                 summary["ci95_high"]= summary["mean"] + t * summary["se"]
                 st.success(f"✅ {n} réplicas calculadas.")
-                st.dataframe(summary.round(3), width="stretch")
+                st.dataframe(summary.round(3), use_container_width=True)
         else:
             st.warning(
                 "⏳ **Las 30 réplicas están en proceso.**\n\n"
@@ -807,7 +924,7 @@ with tab_ic:
             }
             st.markdown('<div class="section-header">KPIs del caso base S0 como referencia</div>', unsafe_allow_html=True)
             st.dataframe(pd.DataFrame(list(kpi_prev.items()), columns=["KPI", "Valor (S0_base)"]),
-                         width="stretch", hide_index=True)
+                         use_container_width=True, hide_index=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TAB 5 — ANÁLISIS DE SENSIBILIDAD
@@ -871,7 +988,7 @@ with tab_sens:
             {"ID": k, "Descripción": v, "Disponible": "✅" if k in available_scen else "⏳"}
             for k, v in SCENARIO_LABELS.items()
         ])
-        st.dataframe(df_def, width="stretch", hide_index=True)
+        st.dataframe(df_def, use_container_width=True, hide_index=True)
     else:
         df_sens = pd.DataFrame(scen_rows)
         st.markdown(f"**{len(df_sens)} escenarios cargados de {len(SCENARIO_LABELS)} definidos.**")
@@ -884,7 +1001,7 @@ with tab_sens:
                 val = row.get(k, np.nan)
                 d[lbl] = fmt.format(val) if not pd.isna(val) else "N/A"
             disp.append(d)
-        st.dataframe(pd.DataFrame(disp), width="stretch", hide_index=True)
+        st.dataframe(pd.DataFrame(disp), use_container_width=True, hide_index=True)
 
         base_row_s = df_sens[df_sens["id"] == "S0_base"].iloc[0] if "S0_base" in df_sens["id"].values else None
         if base_row_s is not None and len(df_sens) > 1:
@@ -901,7 +1018,7 @@ with tab_sens:
                         dp = (val - base) / abs(base) * 100
                         d[f"Δ {lbl}"] = f"{'▲' if dp > 0 else '▼'} {abs(dp):.1f}%"
                 delta_rows.append(d)
-            st.dataframe(pd.DataFrame(delta_rows), width="stretch", hide_index=True)
+            st.dataframe(pd.DataFrame(delta_rows), use_container_width=True, hide_index=True)
 
             st.markdown('<div class="section-header">Radar de KPIs (utilización de recursos)</div>', unsafe_allow_html=True)
             r_kpis = ["cumplimiento", "util_chairs", "util_nurses", "util_pharm"]
@@ -915,7 +1032,7 @@ with tab_sens:
                     name=row["escenario"], line_color=pal[i % len(pal)],
                 ))
             fig_rad.update_layout(polar=dict(radialaxis=dict(range=[0, 100])), showlegend=True, height=400)
-            st.plotly_chart(fig_rad, width="stretch")
+            st.plotly_chart(fig_rad, use_container_width=True)
 
         st.markdown('<div class="section-header">Comparación por KPI individual</div>', unsafe_allow_html=True)
         sel_ks = st.selectbox("KPI a comparar",
@@ -932,7 +1049,7 @@ with tab_sens:
             color_discrete_sequence=px.colors.qualitative.Bold,
         )
         fig_cmp.update_layout(showlegend=False, plot_bgcolor=COLORS["bg"], height=320)
-        st.plotly_chart(fig_cmp, width="stretch")
+        st.plotly_chart(fig_cmp, use_container_width=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TAB 6 — MODELO / CG
@@ -960,7 +1077,7 @@ with tab_cg:
             fig_pt.update_layout(plot_bgcolor=COLORS["bg"], height=240,
                                  xaxis_title="Día", yaxis_title="# Patrones",
                                  xaxis=dict(gridcolor="#f4f4f5"), yaxis=dict(gridcolor="#f4f4f5"))
-            st.plotly_chart(fig_pt, width="stretch")
+            st.plotly_chart(fig_pt, use_container_width=True)
 
         if not df_res_f.empty and "obj_value" in df_res_f.columns:
             st.markdown('<div class="section-header">Valor Objetivo del Master LP por Día</div>', unsafe_allow_html=True)
@@ -972,7 +1089,7 @@ with tab_cg:
             fig_ob.update_layout(plot_bgcolor=COLORS["bg"], height=240,
                                  xaxis_title="Día", yaxis_title="Obj. Value",
                                  xaxis=dict(gridcolor="#f4f4f5"), yaxis=dict(gridcolor="#f4f4f5"))
-            st.plotly_chart(fig_ob, width="stretch")
+            st.plotly_chart(fig_ob, use_container_width=True)
 
         st.markdown('<div class="section-header">Convergencia CG — Día Seleccionado</div>', unsafe_allow_html=True)
         if not df_cg_f.empty and "iteration" in df_cg_f.columns:
@@ -996,14 +1113,14 @@ with tab_cg:
                     yaxis2=dict(title="Patrones añadidos", overlaying="y", side="right", showgrid=False),
                     legend=dict(orientation="h", y=-0.25),
                 )
-                st.plotly_chart(fig_cv, width="stretch")
+                st.plotly_chart(fig_cv, use_container_width=True)
             else:
                 st.info("Todos los días se resolvieron en 1 iteración en el período seleccionado.")
         else:
             st.info("No hay historial de Column Generation para el período seleccionado.")
 
         with st.expander("📋 Ver tabla CG_Historial"):
-            st.dataframe(df_cg_f, width="stretch", hide_index=True)
+            st.dataframe(df_cg_f, use_container_width=True, hide_index=True)
         with st.expander("📋 Ver tabla Resumen_Dias"):
             if not df_res_f.empty:
-                st.dataframe(df_res_f, width="stretch", hide_index=True)
+                st.dataframe(df_res_f, use_container_width=True, hide_index=True)

@@ -21,6 +21,7 @@ CapstoneG15/
 |   +-- resultados_30_replicas/
 +-- Dashboard/
 |   +-- dashboard_intradia_app.py
+|   +-- dashboard_v2_app.py
 |   +-- calc_kpi_heuristica.py
 |   +-- rewrite_dashboard_script.py
 |   +-- solution_heuristica_240.xlsx
@@ -46,14 +47,14 @@ https://capstoneg15-2.streamlit.app/
 Desde la raiz del repositorio:
 
 ```bash
-streamlit run "Dashboard/dashboard_intradia_app.py"
+streamlit run "Dashboard/dashboard_v2_app.py"
 ```
 
 El dashboard carga automaticamente:
 
-- El resultado principal intradia desde `Dashboard/test-240.xlsx`.
-- El caso base heuristico desde `Dashboard/solution_heuristica_240.xlsx`.
-- Los intervalos de confianza desde `Modelo INTRAdia V2/resultados_intradia_30_replicas/`.
+- El resultado principal intradia desde `Analisis Sensibilidad/resultados_intradia/S0_base/solution_intradia-1.xlsx`.
+- Los intervalos de confianza desde `Analisis Sensibilidad/resultados_intradia/S0_base/`.
+- Los escenarios de sensibilidad disponibles desde `Analisis Sensibilidad/resultados_intradia/<scenario_id>/`.
 
 En la pestana **IC 95%** se muestran:
 
@@ -155,7 +156,7 @@ Luego se puede volver a abrir el dashboard:
 
 ```bash
 cd ..
-streamlit run "Dashboard/dashboard_intradia_app.py"
+streamlit run "Dashboard/dashboard_v2_app.py"
 ```
 
 ## Ejecutar un solo modelo Interdia
