@@ -979,11 +979,11 @@ with tab_sens:
     # Escenarios finales con intradia ejecutado. S2, S4 y S6 se excluyen
     # explicitamente porque no fueron corridos en intradia para la entrega.
     SCENARIO_LABELS = {
-        "S0_base":           "S0 - Base",
+        "S0_base":           "S0 - Escenario Optimizado",
         "S1_demanda_110":    "S1 - Demanda +10%",
-        "S3_sillas_14":      "S3 - 14 Sillas (-1)",
-        "S5_enfermeras_5":   "S5 - 5 Enfermeras (+1)",
-        "S7_duracion_110":   "S7 - Duracion +10%",
+        "S3_sillas_14":      "S2 - 14 Sillas (-1)",
+        "S5_enfermeras_5":   "S3 - 5 Enfermeras (+1)",
+        "S7_duracion_110":   "S4 - Duracion +10%",
     }
 
     STATUS_SCENARIO_IDS = set(SCENARIO_LABELS.keys()) | {"S8_eventos_expost", "S9_buffer_6"}
