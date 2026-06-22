@@ -530,7 +530,12 @@ with tab_kpi:
 # TAB 3 — DÍA ESPECÍFICO
 # ─────────────────────────────────────────────────────────────────────────────
 with tab_dia:
-    day_prog = df_prog[df_prog["day"] == selected_day].copy()
+    treat_today = df_prog[(df_prog["day"] == selected_day) & (df_prog["task_type"] != "pharmacy_only")]
+    if "pharmacy_day" in df_prog_raw.columns:
+        pharm_today = df_prog_raw[(df_prog_raw["pharmacy_day"] == selected_day) & (df_prog_raw["task_type"] == "pharmacy_only")]
+    else:
+        pharm_today = df_prog[(df_prog["day"] == selected_day) & (df_prog["task_type"] == "pharmacy_only")]
+    day_prog = pd.concat([treat_today, pharm_today])
     day_ocup = df_ocup[df_ocup["day"] == selected_day].copy() if not df_ocup.empty else pd.DataFrame()
 
     if day_prog.empty:
@@ -628,6 +633,8 @@ with tab_dia:
 
             if ph_x: fig_p.add_trace(go.Bar(x=ph_x, y=ph_y, base=ph_b, orientation="h", name="Farmacia (Hoy)",
                                              marker_color="#0ea5e9", hovertext=ph_h, hoverinfo="text"))
+            if ph_ant_x: fig_p.add_trace(go.Bar(x=ph_ant_x, y=ph_ant_y, base=ph_ant_b, orientation="h", name="Farmacia (Anticipada)",
+                                             marker_color="#f59e0b", hovertext=ph_ant_h, hoverinfo="text"))
             if wt_x: fig_p.add_trace(go.Bar(x=wt_x, y=wt_y, base=wt_b, orientation="h", name="Espera",
                                              marker_color="#ef4444", hovertext=wt_h, hoverinfo="text"))
             if tr_x: fig_p.add_trace(go.Bar(x=tr_x, y=tr_y, base=tr_b, orientation="h", name="Tratamiento",
@@ -679,7 +686,6 @@ with tab_dia:
                     df_prog_ph = df_prog_raw[df_prog_raw["pharmacy_day"] == selected_day].copy()
                 else:
                     df_prog_ph = df_prog[df_prog['day'] == selected_day].copy()
-                    
                 pharm_hoy = [0] * len(day_ocup)
                 pharm_ant = [0] * len(day_ocup)
                 for _, row in df_prog_ph.iterrows():
