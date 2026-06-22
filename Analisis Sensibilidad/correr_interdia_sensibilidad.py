@@ -216,14 +216,28 @@ def run_one(
     time_limit: Optional[int],
     mip_gap: Optional[float],
     disable_gap_stall: bool,
+    prepare_only: bool,
 ) -> InterdiaSensitivityResult:
     datos_xlsx = out_dir / f"DatosV2-{scenario.id}-{replica}.xlsx"
     output_xlsx = out_dir / f"solution_interday_{scenario.id}-{replica}.xlsx"
     log_file = out_dir / f"log_interdia_{scenario.id}-{replica}.txt"
 
     total_arrivals = generate_scenario_replica(scenario, replica, seed, datos_xlsx, overwrite)
-    code = build_model_code(scenario, datos_xlsx, output_xlsx, gurobi_threads, time_limit, mip_gap, disable_gap_stall)
+    if prepare_only:
+        return InterdiaSensitivityResult(
+            scenario_id=scenario.id,
+            scenario_label=scenario.label,
+            replica=replica,
+            seed=seed,
+            datos_xlsx=str(datos_xlsx),
+            output_xlsx=str(output_xlsx),
+            log_file=str(log_file),
+            returncode=0,
+            status=f"PREPARED arrivals={total_arrivals}",
+            elapsed_seconds=0.0,
+        )
 
+    code = build_model_code(scenario, datos_xlsx, output_xlsx, gurobi_threads, time_limit, mip_gap, disable_gap_stall)
     t0 = time.time()
     with open(log_file, "w", encoding="utf-8", errors="replace") as log:
         log.write(f"Scenario: {scenario.id} | {scenario.label}\n")
@@ -274,6 +288,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--time-limit", type=int, default=1800)
     parser.add_argument("--mip-gap", type=float, default=0.01)
     parser.add_argument("--disable-gap-stall", action="store_true", default=True)
+    parser.add_argument(
+        "--prepare-only",
+        action="store_true",
+        help="Solo genera los DatosV2 modificados y el resumen; no ejecuta Gurobi.",
+    )
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args()
 
@@ -303,6 +322,7 @@ def main() -> None:
                         args.time_limit,
                         args.mip_gap,
                         args.disable_gap_stall,
+                        args.prepare_only,
                     )
                 )
         for future in as_completed(futures):
@@ -319,4 +339,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
