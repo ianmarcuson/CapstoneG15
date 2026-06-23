@@ -243,7 +243,13 @@ def summarize_range_from_daily_replicas(df_daily_rep: pd.DataFrame, start_day: i
 
     rows = []
     for replica, grp in df.groupby("replica"):
-        sessions = float(grp["daily_sessions"].sum())
+        # Use daily_unique_patients as sessions count to represent true treatment sessions
+        # (since daily_sessions incorrectly counted pharmacy_only tasks in older precalculated CSVs)
+        if "daily_unique_patients" in grp.columns:
+            sessions = float(grp["daily_unique_patients"].sum())
+        else:
+            sessions = float(grp["daily_sessions"].sum())
+
         chairs_capacity = float(grp["daily_chairs_capacity_sum"].sum())
         chairs_reg_capacity = float(grp["daily_chairs_reg_capacity_sum"].sum())
         nurse_capacity = float(grp["daily_nurse_capacity_sum"].sum())
@@ -251,6 +257,8 @@ def summarize_range_from_daily_replicas(df_daily_rep: pd.DataFrame, start_day: i
         most_loaded_day = np.nan
         if "daily_treatment_modules" in grp.columns and not grp.empty:
             most_loaded_day = int(grp.loc[grp["daily_treatment_modules"].idxmax(), "day"])
+
+        wait_weight = grp["daily_unique_patients"] if "daily_unique_patients" in grp.columns else grp["daily_sessions"]
 
         rows.append({
             "replica": replica,
@@ -260,7 +268,7 @@ def summarize_range_from_daily_replicas(df_daily_rep: pd.DataFrame, start_day: i
             "total_extra": float(grp["daily_extra_modules"].sum()),
             "days_extra": int((grp["daily_extra_modules"] > 0).sum()),
             "max_wait": float(grp["daily_max_wait"].max()) if "daily_max_wait" in grp.columns else np.nan,
-            "avg_wait": (grp["daily_avg_wait"] * grp["daily_sessions"]).sum() / sessions if sessions > 0 else np.nan,
+            "avg_wait": (grp["daily_avg_wait"] * wait_weight).sum() / sessions if sessions > 0 else np.nan,
             "util_chairs": grp["daily_chairs_used_sum"].sum() / chairs_capacity * 100 if chairs_capacity > 0 else np.nan,
             "util_chairs_reg": grp["daily_chairs_reg_used_sum"].sum() / chairs_reg_capacity * 100 if chairs_reg_capacity > 0 else np.nan,
             "util_nurses": grp["daily_nurse_used_sum"].sum() / nurse_capacity * 100 if nurse_capacity > 0 else np.nan,

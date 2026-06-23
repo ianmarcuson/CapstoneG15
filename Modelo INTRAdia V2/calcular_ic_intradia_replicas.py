@@ -132,13 +132,15 @@ def filter_days(df: pd.DataFrame, start_day: Optional[int], end_day: Optional[in
 
 
 def compute_kpis(df_prog: pd.DataFrame, df_ocup: pd.DataFrame, df_res: pd.DataFrame, df_pend: pd.DataFrame) -> Dict:
-    total_sessions = len(df_prog)
-    unique_patients = df_prog["patient_id"].nunique() if total_sessions > 0 else 0
-    cumplimiento = (df_prog["treatment_end"] <= 47).sum() / total_sessions * 100 if total_sessions > 0 else 0.0
-    total_extra = df_prog["extra_chair_modules"].sum() if total_sessions > 0 else 0
-    days_extra = df_prog[df_prog["extra_chair_modules"] > 0]["day"].nunique() if total_sessions > 0 else 0
-    max_wait = int(df_prog["treatment_start"].max()) if total_sessions > 0 else 0
-    avg_wait = float(df_prog["treatment_start"].mean()) if total_sessions > 0 else 0.0
+    # Filter out pharmacy_only tasks to get the true treatment sessions
+    treat = df_prog[df_prog["task_type"] != "pharmacy_only"] if not df_prog.empty else pd.DataFrame()
+    total_sessions = len(treat)
+    unique_patients = treat["patient_id"].nunique() if total_sessions > 0 else 0
+    cumplimiento = (treat["treatment_end"] <= 47).sum() / total_sessions * 100 if total_sessions > 0 else 0.0
+    total_extra = df_prog["extra_chair_modules"].sum() if not df_prog.empty else 0
+    days_extra = df_prog[df_prog["extra_chair_modules"] > 0]["day"].nunique() if not df_prog.empty else 0
+    max_wait = int(df_prog["treatment_start"].max()) if not df_prog.empty else 0
+    avg_wait = float(treat["treatment_start"].mean()) if total_sessions > 0 else 0.0
 
     total_chairs_cap = df_ocup["chair_capacity"].sum() if not df_ocup.empty else 0
     util_chairs = df_ocup["chairs_used"].sum() / total_chairs_cap * 100 if total_chairs_cap > 0 else 0.0
@@ -221,21 +223,25 @@ def compute_daily_kpis(replica: int, df_prog: pd.DataFrame, df_ocup: pd.DataFram
         else:
             nurse_series = pd.Series(dtype=float)
 
+        # Filter out pharmacy_only tasks for session-based KPIs
+        day_treat = day_prog[day_prog["task_type"] != "pharmacy_only"] if not day_prog.empty else pd.DataFrame()
+        treat_sessions = len(day_treat)
+
         rows.append(
             {
                 "replica": replica,
                 "day": int(day),
-                "daily_sessions": int(len(day_prog)),
-                "daily_unique_patients": int(day_prog["patient_id"].nunique()) if not day_prog.empty else 0,
-                "daily_patient_ids": "|".join(map(str, sorted(day_prog["patient_id"].dropna().unique()))) if not day_prog.empty else "",
-                "daily_treatment_modules": float(day_prog["treatment_modules"].sum()) if not day_prog.empty else 0.0,
+                "daily_sessions": int(treat_sessions),
+                "daily_unique_patients": int(day_treat["patient_id"].nunique()) if treat_sessions > 0 else 0,
+                "daily_patient_ids": "|".join(map(str, sorted(day_treat["patient_id"].dropna().unique()))) if treat_sessions > 0 else "",
+                "daily_treatment_modules": float(day_treat["treatment_modules"].sum()) if treat_sessions > 0 else 0.0,
                 "daily_extra_modules": float(day_prog["extra_chair_modules"].sum()) if not day_prog.empty else 0.0,
-                "daily_avg_wait": float(day_prog["treatment_start"].mean()) if not day_prog.empty else 0.0,
-                "daily_max_wait": float(day_prog["treatment_start"].max()) if not day_prog.empty else 0.0,
+                "daily_avg_wait": float(day_treat["treatment_start"].mean()) if treat_sessions > 0 else 0.0,
+                "daily_max_wait": float(day_treat["treatment_start"].max()) if treat_sessions > 0 else 0.0,
                 "daily_peak_chairs": float(day_ocup["chairs_used"].max()) if not day_ocup.empty else 0.0,
                 "daily_peak_nurses": float(nurse_series.max()) if not nurse_series.empty else 0.0,
                 "daily_peak_pharmacy": float(day_ocup["pharmacy_used"].max()) if not day_ocup.empty else 0.0,
-                "daily_ontime_sessions": int((day_prog["treatment_end"] <= 47).sum()) if not day_prog.empty else 0,
+                "daily_ontime_sessions": int((day_treat["treatment_end"] <= 47).sum()) if treat_sessions > 0 else 0,
                 "daily_chairs_used_sum": float(day_ocup["chairs_used"].sum()) if not day_ocup.empty else 0.0,
                 "daily_chairs_capacity_sum": float(day_ocup["chair_capacity"].sum()) if not day_ocup.empty else 0.0,
                 "daily_chairs_reg_used_sum": float(reg_ocup["chairs_used"].sum()) if not reg_ocup.empty else 0.0,
